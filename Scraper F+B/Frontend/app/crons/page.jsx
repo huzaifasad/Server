@@ -20,7 +20,7 @@ import {
 import CronJobForm from './components/CronJobForm';
 import ExecutionLogs from './components/ExecutionLogs';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.buythelook.us';
 
 export default function CronsPage() {
   const [jobs, setJobs] = useState([]);

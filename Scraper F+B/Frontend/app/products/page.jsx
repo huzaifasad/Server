@@ -1,7 +1,7 @@
 'use client';
 
 import Link from "next/link"
-
+import { Suspense } from 'react';
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFxa2Vwcnd4eHNyeXJvcG5oZnZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU0MDkzNDgsImV4cCI6MjA1MDk4NTM0OH0.aWBLwn75nnRzKQ20gKx_9rBQqPQJzx9vT2t_MBXsLEg'
 );
 
-export default function ProductsPage() {
+function ProductsPageContent() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -273,5 +273,13 @@ export default function ProductsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <ProductsPageContent />
+    </Suspense>
   );
 }

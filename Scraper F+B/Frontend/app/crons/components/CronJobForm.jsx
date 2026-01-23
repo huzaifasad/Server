@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import CategorySummary from './CategorySummary';
 import { X, Plus, Loader2 } from 'lucide-react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.buythelook.us';
 
 export default function CronJobForm({ onSuccess, onCancel }) {
   const [formData, setFormData] = useState({

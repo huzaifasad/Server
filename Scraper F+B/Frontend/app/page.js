@@ -48,8 +48,8 @@ export default function ScraperDashboard() {
   const wsRef = useRef(null);
   const logsEndRef = useRef(null);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-  const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:4000';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.buythelook.us';
+  const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'wss://api.buythelook.us';
 
   useEffect(() => {
     fetchCategories();
