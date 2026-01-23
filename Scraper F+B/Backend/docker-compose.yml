@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: buythelook-api
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    env_file:
+      - .env
+    volumes:
+      - ./logs:/app/logs
+    shm_size: '2gb'
+    security_opt:
+      - seccomp:unconfined
+    cap_add:
+      - SYS_ADMIN
