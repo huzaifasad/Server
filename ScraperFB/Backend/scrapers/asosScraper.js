@@ -264,7 +264,7 @@ export async function scrapeASOS(
       message: `Starting category scraper for "${breadcrumb}" in ${options.mode} mode...`
     });
   }
-
+//
   const browser = await puppeteer.launch({
     headless: 'new',
     args: [
