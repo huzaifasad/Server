@@ -3,10 +3,13 @@ FROM node:20-slim
 ENV NODE_ENV=production
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV DISPLAY=:99
 
 RUN apt-get update && apt-get install -y \
     chromium \
     chromium-sandbox \
+    dbus \
+    xvfb \
     fonts-ipafont-gothic \
     fonts-wqy-zenhei \
     fonts-thai-tlwg \
