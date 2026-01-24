@@ -26,7 +26,7 @@ jobs:
           echo "📥 Pulling latest code from GitHub..."
           sudo git pull origin main
           
-          echo "🛑 Stopping old containers..."
+          echo "🛑 Stopping old containers...xc"
           sudo docker-compose down
           
           echo "🏗️ Building new Docker image..."
