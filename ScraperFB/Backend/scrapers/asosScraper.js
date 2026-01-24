@@ -57,6 +57,7 @@ const ASOS_CATEGORIES = {
         url: "/women/dresses/cat/?cid=8799",
         subcategories: {
           "casual-dresses": { name: "Casual Dresses", url: "/women/day-dresses/cat/?cid=8799" },
+          "party-dresses": { name: "Party Dresses", url: "/women/dresses/party-dresses/cat/?cid=11057" },
           "evening-dresses": { name: "Evening Dresses", url: "/women/going-out-dresses/cat/?cid=8799" },
           "midi-dresses": { name: "Midi Dresses", url: "/women/midi-dresses/cat/?cid=15210" },
           "maxi-dresses": { name: "Maxi Dresses", url: "/women/maxi-dresses/cat/?cid=15156" },
@@ -218,6 +219,22 @@ async function simulateHumanBehavior(page) {
   }
 }
 
+async function expandAccordions(page) {
+  try {
+    await page.evaluate(() => {
+      const buttons = document.querySelectorAll('button[aria-expanded="false"]');
+      buttons.forEach(btn => {
+        try {
+          btn.click();
+        } catch (e) {}
+      });
+    });
+    await randomDelay(500, 1000);
+  } catch (e) {
+    // Ignore errors
+  }
+}
+
 // Main ASOS scraper function
 export async function scrapeASOS(
   searchTerm = null,
@@ -249,7 +266,7 @@ export async function scrapeASOS(
   }
 
   const browser = await puppeteer.launch({
-    headless: 'new',
+    headless: false,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -526,37 +543,60 @@ export async function scrapeASOS(
   }
 }
 
-// Load all products helper
+// Load all products helper (FIXED: Now handles ASOS infinite scroll properly)
 async function loadAllProducts(page, broadcastProgress) {
-  let lastCount = 0, clicks = 0;
+  let lastCount = 0, clicks = 0, noChangeCount = 0;
   
   broadcastProgress({
     type: 'info',
     message: 'Loading all products from category...'
   });
   
-  while (true) {
+  while (noChangeCount < 3) { // Try 3 times even if count doesn't change
     const currentCount = await page
       .$$eval("li.productTile_U0clN, [data-testid='product-tile']", els => els.length)
       .catch(() => 0);
 
-    if (currentCount === lastCount) break;
-    lastCount = currentCount;
+    if (currentCount === lastCount) {
+      noChangeCount++;
+      broadcastProgress({
+        type: 'warning',
+        message: `No new products loaded (${noChangeCount}/3 attempts). Current: ${currentCount}`
+      });
+    } else {
+      noChangeCount = 0; // Reset counter when products load
+      lastCount = currentCount;
+    }
 
+    // Try to scroll to bottom first (ASOS uses infinite scroll)
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await randomDelay(2000, 3000);
+
+    // Then look for load more button
     const btn = await page.$(
-      "a.loadButton_wWQ3F, [data-auto-id='loadMoreProducts'], [data-testid='load-more-button']"
+      "a.loadButton_wWQ3F, [data-auto-id='loadMoreProducts'], [data-testid='load-more-button'], button[class*='load'], button[class*='more']"
     );
 
-    if (!btn) break;
+    if (btn) {
+      clicks++;
+      broadcastProgress({
+        type: 'progress',
+        message: `Loading more products... (Click ${clicks} - Total visible: ${currentCount})`
+      });
 
-    clicks++;
-    broadcastProgress({
-      type: 'progress',
-      message: `Loading more products... (Click ${clicks} - Total visible: ${currentCount})`
-    });
-
-    await btn.click();
-    await randomDelay(3000, 5000);
+      try {
+        await btn.click();
+        await randomDelay(3000, 5000);
+      } catch (e) {
+        broadcastProgress({
+          type: 'warning',
+          message: `Load more button click failed: ${e.message}`
+        });
+      }
+    } else {
+      // No button found, just scroll and wait
+      await randomDelay(2000, 3000);
+    }
   }
   
   broadcastProgress({
@@ -592,32 +632,191 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
 
     await page.goto(link, { waitUntil: "domcontentloaded", timeout: 60000 });
     await randomDelay(2000, 4000);
-
-    // Extract product data from page
+    
+    // Expand accordions to access all data
+    const expandAccordions = async (page) => {
+      const accordions = await page.$$("button[data-testid='accordion-header']");
+      for (const accordion of accordions) {
+        await accordion.click();
+        await randomDelay(1000, 2000);
+      }
+    };
+    
+    await expandAccordions(page);
+    
+    // Extract complete product data from page (restored from old working scraper)
     const data = await page.evaluate(() => {
       const safeText = (sel) => document.querySelector(sel)?.innerText?.trim() || null;
-      const safeAttr = (sel, attr) => document.querySelector(sel)?.getAttribute(attr) || null;
-
-      const name = safeText('h1[data-auto-id="productTitle"]') || safeText('h1') || document.title.split('|')[0].trim();
       
-      const priceText = safeText('[data-testid="current-price"]') || safeText('.current-price') || safeText('[class*="price"]');
-      const currency = priceText?.match(/[£$€]/)?.[0] || 'USD';
-      const priceValue = priceText ? parseFloat(priceText.replace(/[^\d.]/g, "")) : null;
-
-      const images = Array.from(document.querySelectorAll('img[src*="asos-media"]'))
-        .map(img => img.src)
-        .filter(src => src && src.includes('asos-media'))
-        .filter((v, i, a) => a.indexOf(v) === i);
-
-      return {
-        name,
-        price: priceValue,
-        currency,
-        images,
-        product_url: window.location.href,
-        product_id: window.location.pathname.match(/prd\/(\d+)/)?.[1] || Math.floor(Math.random() * 1000000000)
-      };
-    });
+      const name = safeText("h1[data-testid='product-title']") || document.title.split("|")[0].trim();
+      
+      const price = safeText("[data-testid='current-price']");
+      const currency = price?.match(/[£$€]/)?.[0] || null;
+      const priceValue = price ? parseFloat(price.replace(/[^\d.]/g, "")) : null;
+      
+      const stock_status = safeText("[data-testid='stock-availability']") || "Available";
+      const availability = !stock_status.toLowerCase().includes('out of stock') &&
+                           !stock_status.toLowerCase().includes('unavailable');
+      
+      // Extract colors
+      let colors = [];
+      const selectedColor = document.querySelector("span[data-testid='product-colour']")?.innerText.trim();
+      if (selectedColor) colors.push(selectedColor);
+      document.querySelectorAll("[data-testid='facetList'] li a").forEach((a) => {
+        const label = a.getAttribute("aria-label")?.trim();
+        if (label && !colors.includes(label)) colors.push(label);
+      });
+      
+      // Extract description
+      let description = null;
+      const descBlock = document.querySelector("#productDescriptionDetails .F_yfF");
+      if (descBlock) description = descBlock.innerText.replace(/\s+/g, " ").trim();
+      if (!description) {
+        const metaDesc = document.querySelector("meta[name='description']")?.content;
+        if (metaDesc) description = metaDesc.trim();
+      }
+      
+      // Extract brand
+      let brand = null;
+      const brandBlock = document.querySelector("#productDescriptionBrand .F_yfF");
+      if (brandBlock) {
+        const strong = brandBlock.querySelector("strong");
+        brand = strong ? strong.innerText.trim() : brandBlock.innerText.trim();
+      }
+      if (!brand) {
+        const parts = window.location.pathname.split("/");
+        if (parts.length > 1) {
+          brand = parts[1].replace(/-/g, " ");
+          brand = brand.charAt(0).toUpperCase() + brand.slice(1);
+        }
+      }
+      
+      // Extract category
+      let category = "";
+      const catLink = document.querySelector("#productDescriptionDetails a[href*='/cat/']");
+      if (catLink) category = catLink.innerText.trim();
+      
+      // Extract materials
+      const materialsText = document.querySelector("#productDescriptionAboutMe .F_yfF")?.innerText.trim() || null;
+      
+      // Extract care info
+      let care_info = null;
+      const careSelectors = [
+        "#productDescriptionCareInfo .F_yfF",
+        "[data-testid='productDescriptionCareInfo'] .F_yfF",
+        ".accordion-item-module_contentWrapper__qd4TE .F_yfF",
+        "[aria-controls='productDescriptionCareInfo'] ~ div .F_yfF",
+        "[aria-label='Look After Me'] ~ div .F_yfF"
+      ];
+      
+      for (const selector of careSelectors) {
+        const element = document.querySelector(selector);
+        if (element && element.innerText.trim()) {
+          care_info = element.innerText.trim().replace(/\s+/g, " ");
+          break;
+        }
+      }
+      
+      // Extract sizes
+      let size = [];
+      document.querySelectorAll("#variantSelector option").forEach((opt) => {
+        if (opt.value) size.push(opt.innerText.trim());
+      });
+      if (size.length === 0) size = null;
+      
+      // Extract images
+      const images = Array.from(document.querySelectorAll("#core-product img"))
+        .map((img) => img.src.replace(/\?.*$/, ""))
+        .map((src) => `${src}?$n_960w$&wid=960&fit=constrain`)
+        .filter((src) => src.includes("asos-media"));
+      
+    // Extract product ID
+    const urlParts = window.location.pathname.split('/');
+    let product_id = null;
+    for (let part of urlParts) {
+      if (part.includes('prd')) {
+        const idMatch = part.match(/(\d+)/);
+        if (idMatch) {
+          product_id = parseInt(idMatch[1]);
+          break;
+        }
+      }
+    }
+    
+    // Smart occasion detection based on category, name, and description
+    const detectOccasions = () => {
+      const textLower = `${name} ${description || ''} ${category || ''}`.toLowerCase();
+      const occasions = [];
+      
+      // Party/Evening occasions
+      if (textLower.match(/party|evening|cocktail|formal|gown|sequin|glitter|sparkle/i)) {
+        occasions.push('party');
+      }
+      if (textLower.match(/wedding|formal|ceremony|gala|prom|ball/i)) {
+        occasions.push('formal');
+      }
+      
+      // Work/Professional
+      if (textLower.match(/work|office|professional|business|blazer|suit/i)) {
+        occasions.push('work');
+      }
+      
+      // Casual/Everyday
+      if (textLower.match(/casual|everyday|comfort|relax|lounge|basic/i)) {
+        occasions.push('everyday');
+        occasions.push('casual');
+      }
+      
+      // Date/Night out
+      if (textLower.match(/date|night out|going out|club/i)) {
+        occasions.push('date');
+      }
+      
+      // Vacation/Beach
+      if (textLower.match(/vacation|beach|resort|swim|summer|tropical/i)) {
+        occasions.push('vacation');
+      }
+      
+      // Workout/Active
+      if (textLower.match(/workout|gym|sport|active|running|yoga|fitness|athletic/i)) {
+        occasions.push('workout');
+      }
+      
+      // Default to casual/everyday if no specific occasion detected
+      if (occasions.length === 0) {
+        occasions.push('everyday', 'casual');
+      }
+      
+      return [...new Set(occasions)]; // Remove duplicates
+    };
+    
+    return {
+      name,
+      description,
+      brand,
+      category,
+      price: priceValue,
+      currency,
+      stock_status,
+      availability,
+      materials: materialsText,
+      care_info,
+      size: size ? size.join(", ") : null,
+      color: colors.join(", "),
+      images,
+      product_url: window.location.href,
+      product_id: product_id || Math.floor(Math.random() * 1000000000),
+      colour_code: Math.floor(Math.random() * 1000),
+      section: null,
+      product_family: category?.toUpperCase() || "CLOTHING",
+      product_family_en: category || "Clothing",
+      product_subfamily: null,
+      dimension: null,
+      low_on_stock: !availability,
+      sku: null,
+      occasions: detectOccasions()
+    };
+  });
 
     if (categoryInfo) {
       data.scraped_category = categoryInfo.breadcrumb;
@@ -627,24 +826,44 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
       data.scrape_type = 'ASOS Search';
     }
 
-    // Insert to database
-    try {
-      const insertData = {
-        product_id: String(data.product_id),
-        product_name: data.name,
-        brand: 'ASOS',
-        category_name: categoryInfo?.breadcrumb || 'Uncategorized',
-        price: data.price,
-        currency: data.currency || 'USD',
-        url: data.product_url,
-        source: 'asos',
-        source_priority: 1,
-        image: data.images && data.images.length > 0 ? data.images.map(url => ({ url })) : [],
-        images: data.images && data.images.length > 0 ? data.images.map(url => ({ url })) : null,
-        sync_method: data.scrape_type || 'ASOS Category Scraper',
-        last_synced_by: 'automated_scraper',
-        is_active: true
-      };
+  // Insert to database with all fields including occasions
+  try {
+    const insertData = {
+      product_id: String(data.product_id),
+      product_name: data.name,
+      brand: data.brand || 'ASOS',
+      category_name: categoryInfo?.breadcrumb || data.category || 'Uncategorized',
+      category_id: String(0),
+      section: data.section,
+      product_family: data.product_family,
+      product_subfamily: data.product_subfamily,
+      product_family_en: data.product_family_en,
+      clothing_category: data.category,
+      
+      price: data.price,
+      currency: data.currency || 'GBP',
+      colour: data.color,
+      colour_code: String(data.colour_code),
+      size: data.size || 'One Size',
+      description: data.description,
+      materials_description: data.materials,
+      dimension: data.dimension,
+      
+      low_on_stock: data.low_on_stock,
+      availability: data.availability,
+      sku: data.sku,
+      occasions: data.occasions || [],
+      
+      url: data.product_url,
+      image: data.images && data.images.length > 0 ? data.images.map(url => ({ url })) : [],
+      images: data.images && data.images.length > 0 ? data.images.map(url => ({ url })) : null,
+      
+      source: 'asos',
+      source_priority: 1,
+      sync_method: data.scrape_type || 'ASOS Category Scraper',
+      last_synced_by: 'automated_scraper',
+      is_active: true
+    };
 
       const { data: existingProduct } = await supabase
         .from('zara_cloth_scraper')

@@ -48,8 +48,8 @@ export default function ScraperDashboard() {
   const wsRef = useRef(null);
   const logsEndRef = useRef(null);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.buythelook.us';
-  const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'wss://api.buythelook.us';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:4000';
 
   useEffect(() => {
     fetchCategories();
@@ -154,6 +154,7 @@ export default function ScraperDashboard() {
       let endpoint = '/categories';
       if (store === 'mango') endpoint = '/mango/categories';
       else if (store === 'forever21') endpoint = '/forever21/categories';
+      else if (store === 'allbirds') endpoint = '/allbirds/categories';
       
       const response = await fetch(`${API_URL}${endpoint}`);
       const data = await response.json();
@@ -252,6 +253,7 @@ export default function ScraperDashboard() {
         let endpoint = '/scrape/category';
         if (store === 'mango') endpoint = '/mango/scrape/category';
         else if (store === 'forever21') endpoint = '/forever21/scrape/category';
+        else if (store === 'allbirds') endpoint = '/allbirds/scrape/category';
         
         const url = `${API_URL}${endpoint}`;
         console.log('[v0] API_URL:', API_URL);
@@ -365,7 +367,8 @@ export default function ScraperDashboard() {
                 >
                   <option value="asos">ASOS</option>
                   <option value="mango">Mango</option>
-                  <option value="forever21">Forever 21 (Shopify)</option>
+                  <option value="forever21">Forever 21</option>
+                  <option value="allbirds">Allbirds</option>
                 </select>
                 <p className="text-xs text-muted-foreground">Select which store to scrape</p>
               </div>

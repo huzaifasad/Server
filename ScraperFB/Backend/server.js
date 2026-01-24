@@ -25,11 +25,6 @@ import {
   scrapeForever21 
 } from './scrapers/forever21Scraper.js';
 
-import { 
-  ALLBIRDS_CATEGORIES, 
-  scrapeAllbirds 
-} from './scrapers/allbirdsScraper.js';
-
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
@@ -207,18 +202,6 @@ async function executeCronJob(jobId, isManual = false) {
       breadcrumbFunction = (path) => path.split(' > ').map(p => {
         const parts = path.split(' > ');
         let current = FOREVER21_CATEGORIES;
-        for (const part of parts) {
-          if (current[part]) return current[part].name;
-          current = current[part]?.subcategories || {};
-        }
-        return path;
-      }).join(' > ');
-    } else if (job.scraper_type === 'allbirds') {
-      console.log('[v0] Using Allbirds scraper');
-      scrapeFunction = scrapeAllbirds;
-      breadcrumbFunction = (path) => path.split(' > ').map(p => {
-        const parts = path.split(' > ');
-        let current = ALLBIRDS_CATEGORIES;
         for (const part of parts) {
           if (current[part]) return current[part].name;
           current = current[part]?.subcategories || {};
@@ -1187,137 +1170,6 @@ app.post('/forever21/scrape/bulk', async (req, res) => {
     broadcastProgress({
       type: 'success',
       message: `Forever 21 bulk scraping completed! ${totalProducts} products from ${categoryPaths.length} categories in ${durationFormatted}`
-    });
-  })();
-});
-
-// ========================================
-// ALLBIRDS API ROUTES (Shopify-based)
-// ========================================
-
-// Get Allbirds categories
-app.get('/allbirds/categories', (req, res) => {
-  res.json({ 
-    success: true, 
-    categories: ALLBIRDS_CATEGORIES 
-  });
-});
-
-// Scrape Allbirds single category
-app.post('/allbirds/scrape/category', async (req, res) => {
-  const { categoryPath, mode, limit, startIndex, endIndex, concurrency, email } = req.body;
-
-  if (!categoryPath) {
-    return res.status(400).json({ success: false, error: 'categoryPath is required' });
-  }
-
-  res.json({ 
-    success: true, 
-    message: 'Allbirds scraping started (Shopify API)', 
-    categoryPath 
-  });
-
-  (async () => {
-    const startTime = Date.now();
-    try {
-      const results = await scrapeAllbirds(
-        null,
-        categoryPath,
-        { mode, limit, startIndex, endIndex },
-        concurrency || 5,
-        broadcastProgress
-      );
-
-      const duration = Math.round((Date.now() - startTime) / 1000);
-      const durationFormatted = `${Math.floor(duration / 60)}m ${duration % 60}s`;
-
-      if (email) {
-        await sendEmailNotification(email, {
-          totalProducts: results.successful?.length || 0,
-          successfulProducts: results.successful?.length || 0,
-          failedProducts: results.failed?.length || 0,
-          categoriesScraped: 1,
-          categories: [{ name: categoryPath, productsScraped: results.successful?.length || 0 }],
-          duration: durationFormatted
-        });
-      }
-
-      broadcastProgress({
-        type: 'success',
-        message: `Allbirds scraping completed! ${results.successful?.length || 0} products in ${durationFormatted}`
-      });
-    } catch (err) {
-      broadcastProgress({
-        type: 'error',
-        message: `Allbirds scraping failed: ${err.message}`
-      });
-    }
-  })();
-});
-
-// Scrape Allbirds bulk categories
-app.post('/allbirds/scrape/bulk', async (req, res) => {
-  const { categoryPaths, mode, limit, startIndex, endIndex, concurrency, email } = req.body;
-
-  if (!categoryPaths || !Array.isArray(categoryPaths) || categoryPaths.length === 0) {
-    return res.status(400).json({ success: false, error: 'categoryPaths array is required' });
-  }
-
-  res.json({ 
-    success: true, 
-    message: 'Allbirds bulk scraping started (Shopify API)',
-    categoriesCount: categoryPaths.length
-  });
-
-  (async () => {
-    const startTime = Date.now();
-    let totalProducts = 0;
-    const categories = [];
-
-    for (const categoryPath of categoryPaths) {
-      try {
-        const results = await scrapeAllbirds(
-          null,
-          categoryPath,
-          { mode, limit, startIndex, endIndex },
-          concurrency || 5,
-          broadcastProgress
-        );
-        const successCount = results.successful?.length || 0;
-        totalProducts += successCount;
-        categories.push({ 
-          name: categoryPath, 
-          productsScraped: successCount 
-        });
-      } catch (err) {
-        broadcastProgress({
-          type: 'error',
-          message: `Error scraping Allbirds ${categoryPath}: ${err.message}`
-        });
-        categories.push({ 
-          name: categoryPath, 
-          productsScraped: 0 
-        });
-      }
-    }
-
-    const duration = Math.round((Date.now() - startTime) / 1000);
-    const durationFormatted = `${Math.floor(duration / 60)}m ${duration % 60}s`;
-
-    if (email) {
-      await sendEmailNotification(email, {
-        totalProducts,
-        successfulProducts: totalProducts,
-        failedProducts: 0,
-        categoriesScraped: categoryPaths.length,
-        categories,
-        duration: durationFormatted
-      });
-    }
-
-    broadcastProgress({
-      type: 'success',
-      message: `Allbirds bulk scraping completed! ${totalProducts} products from ${categoryPaths.length} categories in ${durationFormatted}`
     });
   })();
 });

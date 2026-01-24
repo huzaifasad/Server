@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import CategorySummary from './CategorySummary';
 import { X, Plus, Loader2 } from 'lucide-react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.buythelook.us';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export default function CronJobForm({ onSuccess, onCancel }) {
   const [formData, setFormData] = useState({
@@ -47,6 +47,7 @@ export default function CronJobForm({ onSuccess, onCancel }) {
         let endpoint = '/categories';
         if (formData.scraperType === 'mango') endpoint = '/mango/categories';
         else if (formData.scraperType === 'forever21') endpoint = '/forever21/categories';
+        else if (formData.scraperType === 'allbirds') endpoint = '/allbirds/categories';
         
         const response = await fetch(`${API_URL}${endpoint}`);
         const data = await response.json();
@@ -259,13 +260,14 @@ export default function CronJobForm({ onSuccess, onCancel }) {
             }}
             className="w-full px-2 py-1 border rounded text-xs bg-background"
           >
-            <option value="asos">ASOS</option>
-            <option value="mango">Mango</option>
-            <option value="forever21">Forever 21 </option>
-            {/* Future scrapers will appear here */}
-            {/* <option value="zara">Zara</option> */}
-            {/* <option value="hm">H&M</option> */}
-          </select>
+  <option value="asos">ASOS</option>
+  <option value="mango">Mango</option>
+  <option value="forever21">Forever 21</option>
+  <option value="allbirds">Allbirds</option>
+  {/* Future scrapers will appear here */}
+  {/* <option value="zara">Zara</option> */}
+  {/* <option value="hm">H&M</option> */}
+  </select>
         </div>
       </div>
 
