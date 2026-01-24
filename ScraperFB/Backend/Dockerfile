@@ -5,10 +5,12 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 ENV DISPLAY=:99
 
+# Install Chromium and ALL dependencies
 RUN apt-get update && apt-get install -y \
     chromium \
     chromium-sandbox \
     dbus \
+    dbus-x11 \
     xvfb \
     fonts-ipafont-gothic \
     fonts-wqy-zenhei \
@@ -22,10 +24,16 @@ RUN apt-get update && apt-get install -y \
     libatk-bridge2.0-0 \
     libgtk-3-0 \
     libgbm1 \
+    libdrm2 \
+    libxshmfence1 \
     ca-certificates \
     dumb-init \
     --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
+
+# Setup dbus
+RUN mkdir -p /var/run/dbus && \
+    dbus-uuidgen > /etc/machine-id
 
 WORKDIR /app
 
