@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import CronJobForm from './components/CronJobForm';
 import ExecutionLogs from './components/ExecutionLogs';
+import BulkCronGenerator from './components/BulkCronGenerator';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -28,6 +29,7 @@ export default function CronsPage() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showBulkGenerator, setShowBulkGenerator] = useState(false);
   const [selectedJob, setSelectedJob] = useState(null);
   const [stats, setStats] = useState({
     totalJobs: 0,
@@ -106,14 +108,24 @@ export default function CronsPage() {
         <div className="container mx-auto px-4 py-2">
           <div className="flex items-center justify-between">
             <AppHeader isConnected={false} />
-            <Button 
-              onClick={() => setShowForm(!showForm)} 
-              size="sm" 
-              className="h-7 text-xs"
-            >
-              <Plus className="w-3 h-3 mr-1" />
-              New Schedule
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => setShowBulkGenerator(!showBulkGenerator)} 
+                size="sm" 
+                className="h-7 text-xs bg-purple-600 hover:bg-purple-700"
+              >
+                <Clock className="w-3 h-3 mr-1" />
+                Bulk Generator
+              </Button>
+              <Button 
+                onClick={() => setShowForm(!showForm)} 
+                size="sm" 
+                className="h-7 text-xs"
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                New Schedule
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -153,6 +165,18 @@ export default function CronsPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Bulk Generator */}
+        {showBulkGenerator && (
+          <div className="mb-4 mt-10">
+            <BulkCronGenerator 
+              onComplete={() => {
+                setShowBulkGenerator(false);
+                fetchJobs();
+              }}
+            />
+          </div>
+        )}
 
         {/* Create Form */}
         {showForm && (
