@@ -19,6 +19,7 @@ import {
   Trash2, 
   Eye 
 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import CronJobForm from './components/CronJobForm';
 import CronJobsList from './components/CronJobsList';
 import ExecutionLogs from './components/ExecutionLogs';
@@ -32,6 +33,8 @@ export default function CronsPage() {
   const [showForm, setShowForm] = useState(false);
   const [showBulkGenerator, setShowBulkGenerator] = useState(false);
   const [selectedJob, setSelectedJob] = useState(null);
+  const [bulkDeleteMode, setBulkDeleteMode] = useState(false);
+  const [selectedJobIds, setSelectedJobIds] = useState([]);
   const [stats, setStats] = useState({
     totalJobs: 0,
     activeJobs: 0,
@@ -102,6 +105,47 @@ export default function CronsPage() {
     }
   };
 
+  const toggleJobSelection = (jobId) => {
+    setSelectedJobIds(prev => 
+      prev.includes(jobId) 
+        ? prev.filter(id => id !== jobId)
+        : [...prev, jobId]
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedJobIds.length === 0) {
+      alert('No jobs selected');
+      return;
+    }
+
+    if (!confirm(`Delete ${selectedJobIds.length} selected cron jobs?`)) return;
+
+    try {
+      await Promise.all(
+        selectedJobIds.map(jobId =>
+          fetch(`${API_URL}/api/cron/jobs/${jobId}`, { method: 'DELETE' })
+        )
+      );
+
+      setJobs(jobs.filter(j => !selectedJobIds.includes(j.id)));
+      setSelectedJobIds([]);
+      setBulkDeleteMode(false);
+      alert(`Successfully deleted ${selectedJobIds.length} cron jobs`);
+    } catch (error) {
+      console.error('[v0] Failed to bulk delete jobs:', error);
+      alert('Failed to delete some jobs');
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedJobIds.length === jobs.length) {
+      setSelectedJobIds([]);
+    } else {
+      setSelectedJobIds(jobs.map(j => j.id));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -110,22 +154,67 @@ export default function CronsPage() {
           <div className="flex items-center justify-between">
             <AppHeader isConnected={false} />
             <div className="flex gap-2">
-              <Button 
-                onClick={() => setShowBulkGenerator(!showBulkGenerator)} 
-                size="sm" 
-                className="h-7 text-xs bg-purple-600 hover:bg-purple-700"
-              >
-                <Clock className="w-3 h-3 mr-1" />
-                Bulk Generator
-              </Button>
-              <Button 
-                onClick={() => setShowForm(!showForm)} 
-                size="sm" 
-                className="h-7 text-xs"
-              >
-                <Plus className="w-3 h-3 mr-1" />
-                New Schedule
-              </Button>
+              {bulkDeleteMode && (
+                <>
+                  <Button 
+                    onClick={toggleSelectAll}
+                    size="sm" 
+                    variant="outline"
+                    className="h-7 text-xs bg-transparent"
+                  >
+                    {selectedJobIds.length === jobs.length ? 'Deselect All' : 'Select All'}
+                  </Button>
+                  <Button 
+                    onClick={handleBulkDelete}
+                    size="sm" 
+                    className="h-7 text-xs bg-red-600 hover:bg-red-700"
+                    disabled={selectedJobIds.length === 0}
+                  >
+                    <Trash2 className="w-3 h-3 mr-1" />
+                    Delete ({selectedJobIds.length})
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setBulkDeleteMode(false);
+                      setSelectedJobIds([]);
+                    }}
+                    size="sm" 
+                    variant="outline"
+                    className="h-7 text-xs"
+                  >
+                    Cancel
+                  </Button>
+                </>
+              )}
+              {!bulkDeleteMode && (
+                <>
+                  <Button 
+                    onClick={() => setBulkDeleteMode(true)}
+                    size="sm" 
+                    variant="outline"
+                    className="h-7 text-xs"
+                  >
+                    <Trash2 className="w-3 h-3 mr-1" />
+                    Bulk Delete
+                  </Button>
+                  <Button 
+                    onClick={() => setShowBulkGenerator(!showBulkGenerator)} 
+                    size="sm" 
+                    className="h-7 text-xs bg-purple-600 hover:bg-purple-700"
+                  >
+                    <Clock className="w-3 h-3 mr-1" />
+                    Bulk Generator
+                  </Button>
+                  <Button 
+                    onClick={() => setShowForm(!showForm)} 
+                    size="sm" 
+                    className="h-7 text-xs"
+                  >
+                    <Plus className="w-3 h-3 mr-1" />
+                    New Schedule
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -222,6 +311,13 @@ export default function CronsPage() {
               <Card key={job.id} className="hover:shadow-sm transition-shadow">
                 <CardContent className="py-3 px-4">
                   <div className="flex items-center justify-between gap-4">
+                    {bulkDeleteMode && (
+                      <Checkbox
+                        checked={selectedJobIds.includes(job.id)}
+                        onCheckedChange={() => toggleJobSelection(job.id)}
+                        className="mt-1"
+                      />
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="text-xs font-semibold truncate">{job.name}</h3>
