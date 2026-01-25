@@ -1436,7 +1436,7 @@ app.get('/health', (req, res) => {
 // Start server and load cron jobs
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, async () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port xxxxx${PORT}`);
   console.log(`📡 WebSocket server ready`);
   await loadAndScheduleCronJobs();
 });
