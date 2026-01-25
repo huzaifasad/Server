@@ -21,7 +21,6 @@ import {
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import CronJobForm from './components/CronJobForm';
-import CronJobsList from './components/CronJobsList';
 import ExecutionLogs from './components/ExecutionLogs';
 import BulkCronGenerator from './components/BulkCronGenerator';
 
