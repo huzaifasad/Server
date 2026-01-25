@@ -23,12 +23,22 @@ export default function BulkCronGenerator({ onComplete }) {
       const response = await fetch(`${API_URL}/${scraperType}/categories`);
       const data = await response.json();
       
-      if (data.success) {
-        const flatCategories = flattenCategories(data.categories);
-        setCategories(flatCategories);
+      console.log('[v0] Fetched categories:', data);
+      
+      if (data.success && data.categories) {
+        const flattened = flattenCategories(data.categories);
+        console.log('[v0] Flattened categories:', flattened);
+        setCategories(flattened);
+        
+        if (flattened.length === 0) {
+          alert('No categories found. This may indicate an API issue.');
+        }
+      } else {
+        alert(`Failed to load categories: ${data.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('[v0] Failed to fetch categories:', error);
+      alert(`Failed to load categories: ${error.message}`);
     }
   };
 

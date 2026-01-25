@@ -87,7 +87,7 @@ function calculateNextRun(scheduleType, scheduleTime) {
   return next.toISOString();
 }
 
-// Convert schedule to cron expression
+// Convert schedule to cron expression (uses Pakistan timezone directly in cron.schedule)
 function getCronExpression(scheduleType, scheduleTime) {
   if (!scheduleTime || typeof scheduleTime !== 'string') {
     console.error('[v0] Invalid scheduleTime in getCronExpression:', scheduleTime);
@@ -99,6 +99,8 @@ function getCronExpression(scheduleType, scheduleTime) {
   if (!hours || !minutes) {
     throw new Error('scheduleTime must be in format HH:MM');
   }
+  
+  console.log(`[v0] Creating cron for ${hours}:${minutes} Pakistan Time`);
   
   switch (scheduleType) {
     case 'daily':
@@ -136,13 +138,16 @@ async function loadAndScheduleCronJobs() {
 function scheduleCronJob(job) {
   const cronExpression = getCronExpression(job.schedule_type, job.schedule_time);
   
+  // Use timezone option to run in Asia/Karachi timezone
   const task = cron.schedule(cronExpression, async () => {
-    console.log(`⏰ Executing cron job: ${job.name}`);
+    console.log(`⏰ Executing cron job: ${job.name} (Pakistan Time: ${job.schedule_time})`);
     await executeCronJob(job.id);
+  }, {
+    timezone: 'Asia/Karachi'
   });
   
   cronSchedulers.set(job.id, task);
-  console.log(`✓ Scheduled cron job "${job.name}" with expression: ${cronExpression}`);
+  console.log(`✓ Scheduled cron job "${job.name}" at ${job.schedule_time} Pakistan Time (cron: ${cronExpression})`);
 }
 
 // Execute a cron job with timeout and error recovery
@@ -271,7 +276,7 @@ async function executeCronJob(jobId, isManual = false) {
     // Wrap scraping in timeout promise
     const scrapingPromise = (async () => {
       // PERFORMANCE OPTIMIZATION: Parallel category processing (4-6 categories at once for 8 CPU)
-      const PARALLEL_CATEGORIES = 2; // Adjust based on server resources (safe for 8 CPU/16GB)
+      const PARALLEL_CATEGORIES = 4; // Adjust based on server resources (safe for 8 CPU/16GB)
       const categoryChunks = [];
       
       for (let i = 0; i < job.category_paths.length; i += PARALLEL_CATEGORIES) {
@@ -728,13 +733,13 @@ async function sendEmailNotification(recipientEmail, summary) {
 // ASOS API ROUTES
 // ========================================
 
-// Get ASOS categories
-app.get('/categories', (req, res) => {
-  res.json({ 
-    success: true, 
-    categories: ASOS_CATEGORIES 
+  // Get ASOS categories
+  app.get('/asos/categories', (req, res) => {
+    res.json({
+      success: true,
+      categories: ASOS_CATEGORIES
+    });
   });
-});
 
 // Scrape ASOS single category
 app.post('/scrape/category', async (req, res) => {
@@ -1453,7 +1458,7 @@ app.get('/health', (req, res) => {
 // Start server and load cron jobs
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, async () => {
-  console.log(`🚀 Server running on port some categry 4 at a time ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 WebSocket server ready`);
   await loadAndScheduleCronJobs();
 });

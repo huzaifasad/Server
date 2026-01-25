@@ -302,7 +302,7 @@ export default function CronJobForm({ onSuccess, onCancel }) {
           <Input
             type="number"
             min="1"
-            max="20"
+            max="10"
             value={formData.concurrency}
             onChange={(e) => setFormData({...formData, concurrency: parseInt(e.target.value)})}
             className="h-7 text-xs"
@@ -341,6 +341,33 @@ export default function CronJobForm({ onSuccess, onCancel }) {
             </div>
           )}
         </div>
+
+        {formData.scrapeMode === 'range' && (
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <Label className="text-xs">Start Index</Label>
+              <Input
+                type="number"
+                min="0"
+                value={formData.startIndex || 0}
+                onChange={(e) => setFormData({...formData, startIndex: parseInt(e.target.value)})}
+                className="h-7 text-xs"
+                placeholder="e.g., 0"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">End Index</Label>
+              <Input
+                type="number"
+                min="1"
+                value={formData.endIndex || 20}
+                onChange={(e) => setFormData({...formData, endIndex: parseInt(e.target.value)})}
+                className="h-7 text-xs"
+                placeholder="e.g., 20"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Categories */}
