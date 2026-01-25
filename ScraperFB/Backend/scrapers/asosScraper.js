@@ -77,8 +77,89 @@ const ASOS_CATEGORIES = {
       "wedges": { name: "Wedges", url: "/women/sandals/wedges/cat/?cid=10266" }
     }
   },
-
- 
+  accessories: {
+    name: "Accessories",
+    url: "/women/accessories/cat/?cid=4210",
+    subcategories: {
+      "bags": { name: "Bags & Handbags", url: "/women/bags-purses/cat/?cid=8730" },
+      "sunglasses": { name: "Sunglasses", url: "/women/sunglasses/cat/?cid=6519" },
+      "hair-accessories": { name: "Hair Accessories", url: "/women/accessories/hair-accessories/cat/?cid=11412" },
+      "hats-alt": { name: "Hats", url: "/women/accessories/hats/cat/?cid=6449" },
+      "gifts": { name: "Gifts", url: "/women/gifts-for-her/cat/?cid=16095" },
+      "belts-alt": { name: "Belts", url: "/women/accessories/belts/cat/?cid=6448" },
+      "caps": { name: "Caps", url: "/women/accessories/hats/caps/cat/?cid=25407" },
+      "scarves-alt": { name: "Scarves", url: "/women/accessories/scarves/cat/?cid=6452" },
+      "socks-tights": { name: "Socks & Tights", url: "/women/socks-tights/cat/?cid=7657" }
+    }
+  },
+  men: {
+    name: "Men",
+    url: "/men/",
+    subcategories: {
+      clothing: {
+        name: "Clothing",
+        url: "/men/ctas/clothing/cat/?cid=1059",
+        subcategories: {
+          tops: {
+            name: "Tops",
+            url: "/men/t-shirts-vests/cat/?cid=7616",
+            subcategories: {
+              "t-shirts": { name: "T-Shirts & Vests", url: "/men/t-shirts-vests/cat/?cid=7616" },
+              "shirts": { name: "Shirts", url: "/men/shirts/cat/?cid=3602" },
+              "polo-shirts": { name: "Polo Shirts", url: "/men/polo-shirts/cat/?cid=4616" },
+              "hoodies": { name: "Hoodies & Sweatshirts", url: "/men/hoodies-sweatshirts/cat/?cid=5668" },
+              "knitwear": { name: "Knitwear", url: "/men/knitwear/cat/?cid=7617" },
+              "tank-tops": { name: "Tank Tops", url: "/men/vest-tops/cat/?cid=13210" }
+            }
+          },
+          bottoms: {
+            name: "Bottoms",
+            url: "/men/trousers-chinos/cat/?cid=4910",
+            subcategories: {
+              "jeans": { name: "Jeans", url: "/men/jeans/cat/?cid=4208" },
+              "trousers": { name: "Trousers & Chinos", url: "/men/trousers-chinos/cat/?cid=4910" },
+              "shorts": { name: "Shorts", url: "/men/shorts/cat/?cid=7078" },
+              "joggers": { name: "Joggers", url: "/men/joggers/cat/?cid=26090" },
+              "cargo-pants": { name: "Cargo Pants", url: "/men/cargo-trousers/cat/?cid=18797" }
+            }
+          },
+          outerwear: {
+            name: "Jackets & Coats",
+            url: "/men/jackets-coats/cat/?cid=3606",
+            subcategories: {
+              "jackets": { name: "Jackets", url: "/men/jackets/cat/?cid=3606" },
+              "coats": { name: "Coats", url: "/men/coats/cat/?cid=12181" },
+              "blazers": { name: "Blazers", url: "/men/blazers/cat/?cid=12103" },
+              "bombers": { name: "Bomber Jackets", url: "/men/bomber-jackets/cat/?cid=13210" }
+            }
+          }
+        }
+      },
+      shoes: {
+        name: "Shoes",
+        url: "/men/shoes/cat/?cid=4209",
+        subcategories: {
+          "trainers": { name: "Trainers", url: "/men/trainers/cat/?cid=5775" },
+          "boots": { name: "Boots", url: "/men/boots/cat/?cid=4212" },
+          "formal-shoes": { name: "Formal Shoes", url: "/men/formal-shoes/cat/?cid=5770" },
+          "casual-shoes": { name: "Casual Shoes", url: "/men/casual-shoes/cat/?cid=1935" },
+          "sandals": { name: "Sandals & Flip Flops", url: "/men/sandals-flip-flops/cat/?cid=4213" }
+        }
+      },
+      accessories: {
+        name: "Accessories",
+        url: "/men/accessories/cat/?cid=4210",
+        subcategories: {
+          "bags": { name: "Bags", url: "/men/bags/cat/?cid=9265" },
+          "belts": { name: "Belts", url: "/men/belts/cat/?cid=4251" },
+          "hats": { name: "Hats & Caps", url: "/men/hats-caps/cat/?cid=6102" },
+          "watches": { name: "Watches", url: "/men/watches/cat/?cid=4252" },
+          "jewelry": { name: "Jewelry", url: "/men/jewelry/cat/?cid=4253" },
+          "sunglasses": { name: "Sunglasses", url: "/men/sunglasses/cat/?cid=6519" }
+        }
+      }
+    }
+  }
 };
 
 // Export categories and functions
