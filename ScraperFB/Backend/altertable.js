@@ -734,7 +734,18 @@ async function sendEmailNotification(recipientEmail, summary) {
 // ========================================
 
   // Get ASOS categories
-  app.get('/asos/categories', (req, res) => {
+  app.get('/categories', (req, res) => {
+    console.log('[v0] ASOS categories route hit');
+    console.log('[v0] ASOS_CATEGORIES:', typeof ASOS_CATEGORIES, ASOS_CATEGORIES ? 'exists' : 'undefined');
+    
+    if (!ASOS_CATEGORIES) {
+      console.error('[v0] ASOS_CATEGORIES is undefined!');
+      return res.status(500).json({
+        success: false,
+        error: 'ASOS_CATEGORIES not loaded'
+      });
+    }
+    
     res.json({
       success: true,
       categories: ASOS_CATEGORIES
