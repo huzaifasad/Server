@@ -20,7 +20,6 @@ import {
   Eye 
 } from 'lucide-react';
 import CronJobForm from './components/CronJobForm';
-import CronJobsList from './components/CronJobsList';
 import ExecutionLogs from './components/ExecutionLogs';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
