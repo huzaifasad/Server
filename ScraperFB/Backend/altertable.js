@@ -271,7 +271,7 @@ async function executeCronJob(jobId, isManual = false) {
     // Wrap scraping in timeout promise
     const scrapingPromise = (async () => {
       // PERFORMANCE OPTIMIZATION: Parallel category processing (4-6 categories at once for 8 CPU)
-      const PARALLEL_CATEGORIES = 3; // Adjust based on server resources (safe for 8 CPU/16GB)
+      const PARALLEL_CATEGORIES = 4; // Adjust based on server resources (safe for 8 CPU/16GB)
       const categoryChunks = [];
       
       for (let i = 0; i < job.category_paths.length; i += PARALLEL_CATEGORIES) {
@@ -1453,7 +1453,7 @@ app.get('/health', (req, res) => {
 // Start server and load cron jobs
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, async () => {
-  console.log(`🚀 Server running on port some categry 3 at a time ${PORT}`);
+  console.log(`🚀 Server running on port some categry 4 at a time ${PORT}`);
   console.log(`📡 WebSocket server ready`);
   await loadAndScheduleCronJobs();
 });

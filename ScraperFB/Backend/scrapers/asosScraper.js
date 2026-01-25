@@ -629,8 +629,26 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
       delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
     });
 
-    await page.goto(link, { waitUntil: "domcontentloaded", timeout: 60000 });
-    await randomDelay(2000, 4000);
+  // Retry logic for slow product pages
+  let pageLoadSuccess = false;
+  let pageRetries = 0;
+  
+  while (!pageLoadSuccess && pageRetries < 2) {
+    try {
+      await page.goto(link, { waitUntil: "domcontentloaded", timeout: 90000 }); // Increased to 90s
+      pageLoadSuccess = true;
+    } catch (error) {
+      pageRetries++;
+      if (pageRetries < 2) {
+        console.log(`[v0] Retry ${pageRetries}/2 for product page: ${link}`);
+        await randomDelay(2000, 3000);
+      } else {
+        throw error; // Failed after retries
+      }
+    }
+  }
+  
+  await randomDelay(2000, 4000);
     
     // Expand accordions to access all data
     const expandAccordions = async (page) => {
