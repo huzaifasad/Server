@@ -271,7 +271,7 @@ async function executeCronJob(jobId, isManual = false) {
     // Wrap scraping in timeout promise
     const scrapingPromise = (async () => {
       // PERFORMANCE OPTIMIZATION: Parallel category processing (4-6 categories at once for 8 CPU)
-      const PARALLEL_CATEGORIES = 4; // Adjust based on server resources (safe for 8 CPU/16GB)
+      const PARALLEL_CATEGORIES = 2; // Adjust based on server resources (safe for 8 CPU/16GB)
       const categoryChunks = [];
       
       for (let i = 0; i < job.category_paths.length; i += PARALLEL_CATEGORIES) {

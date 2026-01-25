@@ -747,17 +747,25 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
         .map((src) => `${src}?$n_960w$&wid=960&fit=constrain`)
         .filter((src) => src.includes("asos-media"));
       
-    // Extract product ID
-    const urlParts = window.location.pathname.split('/');
+    // Extract product ID (FIXED: Better extraction + deterministic fallback)
     let product_id = null;
-    for (let part of urlParts) {
-      if (part.includes('prd')) {
-        const idMatch = part.match(/(\d+)/);
-        if (idMatch) {
-          product_id = parseInt(idMatch[1]);
-          break;
-        }
-      }
+    
+    // Method 1: Extract from /prd/ path
+    const prdMatch = window.location.pathname.match(/\/prd\/(\d+)/);
+    if (prdMatch) {
+      product_id = prdMatch[1];
+    }
+    
+    // Method 2: Try URL parameter
+    if (!product_id) {
+      const urlParams = new URLSearchParams(window.location.search);
+      product_id = urlParams.get('productId') || urlParams.get('id');
+    }
+    
+    // Method 3: Fallback - use hash of full URL (deterministic, not random!)
+    if (!product_id) {
+      const urlHash = window.location.href.split('?')[0].split('#')[0];
+      product_id = 'asos_' + btoa(urlHash).slice(0, 20).replace(/[^a-zA-Z0-9]/g, '');
     }
     
     // Smart occasion detection based on category, name, and description
@@ -822,7 +830,7 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
       color: colors.join(", "),
       images,
       product_url: window.location.href,
-      product_id: product_id || Math.floor(Math.random() * 1000000000),
+      product_id: product_id, // No random fallback - always deterministic
       colour_code: Math.floor(Math.random() * 1000),
       section: null,
       product_family: category?.toUpperCase() || "CLOTHING",
