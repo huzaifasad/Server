@@ -302,7 +302,7 @@ export default function CronJobForm({ onSuccess, onCancel }) {
           <Input
             type="number"
             min="1"
-            max="10"
+            max="20"
             value={formData.concurrency}
             onChange={(e) => setFormData({...formData, concurrency: parseInt(e.target.value)})}
             className="h-7 text-xs"

@@ -57,7 +57,6 @@ const ASOS_CATEGORIES = {
         url: "/women/dresses/cat/?cid=8799",
         subcategories: {
           "casual-dresses": { name: "Casual Dresses", url: "/women/day-dresses/cat/?cid=8799" },
-          "party-dresses": { name: "Party Dresses", url: "/women/dresses/party-dresses/cat/?cid=11057" },
           "evening-dresses": { name: "Evening Dresses", url: "/women/going-out-dresses/cat/?cid=8799" },
           "midi-dresses": { name: "Midi Dresses", url: "/women/midi-dresses/cat/?cid=15210" },
           "maxi-dresses": { name: "Maxi Dresses", url: "/women/maxi-dresses/cat/?cid=15156" },
@@ -264,10 +263,9 @@ export async function scrapeASOS(
       message: `Starting category scraper for "${breadcrumb}" in ${options.mode} mode...`
     });
   }
-//
-  const browser = await puppeteer.launch({
 
-    headless: 'new',
+  const browser = await puppeteer.launch({
+    headless: false,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -826,6 +824,30 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
     } else {
       data.scrape_type = 'ASOS Search';
     }
+
+  // Validate product data before insertion (skip broken products)
+  const isValidProduct = 
+    data.product_url && 
+    !data.product_url.includes('chrome-error') &&
+    !data.product_url.includes('about:blank') &&
+    data.name && 
+    data.name !== 'www.asos.com' && 
+    data.name.length > 3 &&
+    (data.images && data.images.length > 0);
+
+  if (!isValidProduct) {
+    console.log(`[v0] Skipping invalid product: ${data.name || 'Unknown'} - URL: ${data.product_url}`);
+    broadcastProgress({
+      type: 'warning',
+      message: `Skipped invalid product (page failed to load properly)`
+    });
+    
+    if (currentCronStats) {
+      currentCronStats.productsFailed++;
+    }
+    
+    return null;
+  }
 
   // Insert to database with all fields including occasions
   try {

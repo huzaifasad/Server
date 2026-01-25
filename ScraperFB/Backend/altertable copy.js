@@ -55,22 +55,20 @@ let currentCronStats = {
 // Store cron jobs
 const cronJobs = new Map();
 
-// Calculate next run time based on schedule (Pakistan Time - Asia/Karachi)
+// Calculate next run time based on schedule
 function calculateNextRun(scheduleType, scheduleTime) {
   if (!scheduleTime || typeof scheduleTime !== 'string') {
     console.error('[v0] Invalid scheduleTime:', scheduleTime);
     throw new Error('scheduleTime is required and must be a string in format HH:MM');
   }
   
-  // Get current time in Pakistan timezone (Asia/Karachi - UTC+5)
-  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Karachi' }));
+  const now = new Date();
   const [hours, minutes] = scheduleTime.split(':');
   
   if (!hours || !minutes) {
     throw new Error('scheduleTime must be in format HH:MM');
   }
   
-  // Create next run time in Pakistan timezone
   const next = new Date(now);
   next.setHours(parseInt(hours), parseInt(minutes), 0, 0);
   
@@ -145,15 +143,8 @@ function scheduleCronJob(job) {
   console.log(`✓ Scheduled cron job "${job.name}" with expression: ${cronExpression}`);
 }
 
-// Execute a cron job with timeout and error recovery
+// Execute a cron job
 async function executeCronJob(jobId, isManual = false) {
-  const TIMEOUT_MS = 4 * 60 * 60 * 1000; // 4 hours max
-  const STATS_UPDATE_INTERVAL = 60 * 1000; // Update stats every 60 seconds
-  
-  let timeoutId;
-  let statsUpdateInterval;
-  let logEntry;
-  
   try {
     // Get job details
     const { data: job, error: jobError } = await supabase
@@ -170,7 +161,7 @@ async function executeCronJob(jobId, isManual = false) {
     console.log(`[v0] Executing cron job "${job.name}" (${job.scraper_type}) with ${job.category_paths?.length} categories`);
     
     // Create execution log
-    const { data: log, error: logError } = await supabase
+    const { data: logEntry, error: logError } = await supabase
       .from('scraper_cron_logs')
       .insert({
         cron_job_id: jobId,
@@ -186,7 +177,6 @@ async function executeCronJob(jobId, isManual = false) {
       return;
     }
     
-    logEntry = log;
     console.log(`[v0] Created cron log entry ID: ${logEntry.id}`);
     
     currentCronStats = {
@@ -198,33 +188,6 @@ async function executeCronJob(jobId, isManual = false) {
     
     const startTime = Date.now();
     const categoriesProcessed = [];
-    
-    // Setup timeout to prevent jobs running forever
-    const timeoutPromise = new Promise((_, reject) => {
-      timeoutId = setTimeout(() => {
-        reject(new Error(`Cron job timeout after ${TIMEOUT_MS / 1000 / 60} minutes`));
-      }, TIMEOUT_MS);
-    });
-    
-    // Setup periodic stats updates during long scrapes
-    statsUpdateInterval = setInterval(async () => {
-      const duration = Math.round((Date.now() - startTime) / 1000);
-      const totalScraped = currentCronStats.productsAdded + currentCronStats.productsUpdated;
-      
-      console.log(`[v0] Heartbeat update: ${totalScraped} products, ${duration}s elapsed`);
-      
-      await supabase
-        .from('scraper_cron_logs')
-        .update({
-          duration_seconds: duration,
-          total_products_scraped: totalScraped,
-          products_added: currentCronStats.productsAdded,
-          products_updated: currentCronStats.productsUpdated,
-          products_failed: currentCronStats.productsFailed,
-          categories_processed: categoriesProcessed
-        })
-        .eq('id', logEntry.id);
-    }, STATS_UPDATE_INTERVAL);
     
     broadcastProgress({
       type: 'info',
@@ -268,75 +231,54 @@ async function executeCronJob(jobId, isManual = false) {
       breadcrumbFunction = buildCategoryBreadcrumb;
     }
     
-    // Wrap scraping in timeout promise
-    const scrapingPromise = (async () => {
-      // Scrape each category
-      for (const categoryPath of job.category_paths) {
-        try {
-          console.log(`[v0] Scraping category: ${categoryPath}`);
-          
-          // Create a broadcast wrapper that includes cronId for log tracking
-          const cronBroadcast = (data) => {
-            broadcastProgress({
-              ...data,
-              cronId: jobId,
-              cronJobName: job.name,
-              category: categoryPath
-            });
-          };
-          
-          const results = await scrapeFunction(
-            null,
-            categoryPath,
-            {
-              mode: job.scrape_mode,
-              limit: job.limit_value,
-              startIndex: job.start_index,
-              endIndex: job.end_index
-            },
-            job.concurrency,
-            cronBroadcast, // Pass broadcast function with cronId
-            currentCronStats
-          );
-          
-          // Handle different return formats: array (ASOS/Mango) or object with successful/failed (Forever21)
-          let productsCount = 0;
-          if (Array.isArray(results)) {
-            // ASOS/Mango format: simple array (they update stats internally)
-            productsCount = results.length;
-          } else if (results?.successful) {
-            // Forever21 format: { successful: [...], failed: [...] }
-            // Stats are now updated internally in Forever21 scraper (like ASOS/Mango)
-            productsCount = results.successful.length;
-          }
-          
-          console.log(`[v0] Scraped ${categoryPath}: ${productsCount} products (Stats: ${currentCronStats.productsAdded} added, ${currentCronStats.productsUpdated} updated, ${currentCronStats.productsFailed} failed)`);
-          
-          categoriesProcessed.push({
-            path: categoryPath,
-            name: breadcrumbFunction(categoryPath),
-            products: productsCount,
-            status: 'success'
-          });
-        } catch (error) {
-          console.error(`[v0] Failed to scrape ${categoryPath}:`, error.message, error.stack);
-          categoriesProcessed.push({
-            path: categoryPath,
-            name: breadcrumbFunction(categoryPath),
-            products: 0,
-            status: 'failed',
-            error: error.message
-          });
+    // Scrape each category
+    for (const categoryPath of job.category_paths) {
+      try {
+      console.log(`[v0] Scraping category: ${categoryPath}`);
+      const results = await scrapeFunction(
+        null,
+        categoryPath,
+        {
+          mode: job.scrape_mode,
+          limit: job.limit_value,
+          startIndex: job.start_index,
+          endIndex: job.end_index
+        },
+        job.concurrency,
+        () => {}, // No broadcast for cron jobs (they run in background)
+        currentCronStats
+      );
+        
+        // Handle different return formats: array (ASOS/Mango) or object with successful/failed (Forever21)
+        let productsCount = 0;
+        if (Array.isArray(results)) {
+          // ASOS/Mango format: simple array (they update stats internally)
+          productsCount = results.length;
+        } else if (results?.successful) {
+          // Forever21 format: { successful: [...], failed: [...] }
+          // Stats are now updated internally in Forever21 scraper (like ASOS/Mango)
+          productsCount = results.successful.length;
         }
+        
+        console.log(`[v0] Scraped ${categoryPath}: ${productsCount} products (Stats: ${currentCronStats.productsAdded} added, ${currentCronStats.productsUpdated} updated, ${currentCronStats.productsFailed} failed)`);
+        
+        categoriesProcessed.push({
+          path: categoryPath,
+          name: breadcrumbFunction(categoryPath),
+          products: productsCount,
+          status: 'success'
+        });
+      } catch (error) {
+        console.error(`[v0] Failed to scrape ${categoryPath}:`, error.message, error.stack);
+        categoriesProcessed.push({
+          path: categoryPath,
+          name: breadcrumbFunction(categoryPath),
+          products: 0,
+          status: 'failed',
+          error: error.message
+        });
       }
-    })();
-    
-    // Race between scraping and timeout
-    await Promise.race([scrapingPromise, timeoutPromise]);
-    
-    // Clear intervals and timeouts
-    clearTimeout(timeoutId);
-    clearInterval(statsUpdateInterval);
+    }
     
     const duration = Math.round((Date.now() - startTime) / 1000);
     const totalScraped = currentCronStats.productsAdded + currentCronStats.productsUpdated;
@@ -383,6 +325,7 @@ async function executeCronJob(jobId, isManual = false) {
     } else {
       console.log(`[v0] Email NOT sent - notify_on_success: ${job.notify_on_success}, recipients: ${job.email_recipients?.length || 0}`);
     }
+    
   } catch (error) {
     console.error('Cron execution failed:', error);
     
@@ -417,9 +360,6 @@ async function executeCronJob(jobId, isManual = false) {
       // Send failure email
       await sendCronFailureEmail(job, error.message);
     }
-  } finally {
-    clearTimeout(timeoutId);
-    clearInterval(statsUpdateInterval);
   }
 }
 
@@ -528,35 +468,7 @@ async function sendCronEmailReport(job, logId, categories, durationSeconds) {
         html: htmlContent
       });
     } catch (error) {
-      console.error('[v0] Cron job execution error:', error);
-      
-      // Clear intervals
-      if (timeoutId) clearTimeout(timeoutId);
-      if (statsUpdateInterval) clearInterval(statsUpdateInterval);
-      
-      // Mark log as failed
-      if (logEntry) {
-        const duration = Math.round((Date.now() - (Date.parse(logEntry.started_at))) / 1000);
-        await supabase
-          .from('scraper_cron_logs')
-          .update({
-            status: 'failed',
-            completed_at: new Date().toISOString(),
-            duration_seconds: duration,
-            total_products_scraped: currentCronStats?.productsAdded + currentCronStats?.productsUpdated || 0,
-            products_added: currentCronStats?.productsAdded || 0,
-            products_updated: currentCronStats?.productsUpdated || 0,
-            products_failed: currentCronStats?.productsFailed || 0,
-            error_message: error.message
-          })
-          .eq('id', logEntry.id);
-      }
-      
-      broadcastProgress({
-        type: 'error',
-        message: `❌ Cron job failed: ${error.message}`,
-        cronId: jobId
-      });
+      console.error(`Failed to send email to ${email}:`, error);
     }
   }
 }
@@ -635,21 +547,8 @@ wss.on('connection', (ws) => {
   }));
 });
 
-// Broadcast progress to all connected WebSocket clients (with console logging)
+// Broadcast progress to all connected WebSocket clients
 function broadcastProgress(data) {
-  // Console log all broadcasts for server monitoring
-  const logPrefix = {
-    'info': '[ℹ️ INFO]',
-    'success': '[✅ SUCCESS]',
-    'error': '[❌ ERROR]',
-    'warning': '[⚠️ WARNING]',
-    'progress': '[🔄 PROGRESS]',
-    'complete': '[✔️ COMPLETE]'
-  }[data.type] || '[📢 BROADCAST]';
-  
-  console.log(`${logPrefix} ${data.message}`, data.category ? `(${data.category})` : '');
-  
-  // Send to WebSocket clients
   const message = JSON.stringify(data);
   clients.forEach((client) => {
     if (client.readyState === 1) {
@@ -1436,7 +1335,7 @@ app.get('/health', (req, res) => {
 // Start server and load cron jobs
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, async () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port  ${PORT}`);
   console.log(`📡 WebSocket server ready`);
   await loadAndScheduleCronJobs();
 });
