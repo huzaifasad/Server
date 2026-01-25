@@ -8,34 +8,7 @@ const supabase = createClient(
 
 // CORRECT Allbirds Collections - VERIFIED from allbirds.com
 const ALLBIRDS_CATEGORIES = {
-  men: {
-    name: "Men",
-    handle: "mens",
-    subcategories: {
-      "shoes": {
-        name: "Shoes",
-        handle: "mens-shoes",
-        subcategories: {
-          "everyday-sneakers": { name: "Everyday Sneakers", handle: "mens-sneakers" },
-          "active-shoes": { name: "Active Shoes", handle: "running-shop" },
-          "high-tops": { name: "High Tops", handle: "mens-high-tops" },
-          "slip-ons": { name: "Slip-Ons", handle: "mens-slip-ons" },
-          "loungers": { name: "Loungers", handle: "mens-loungers" },
-          "sandals": { name: "Sandals", handle: "mens-sandals" }
-        }
-      },
-      "apparel": {
-        name: "Apparel",
-        handle: "mens-apparel",
-        subcategories: {
-          "socks": { name: "Socks", handle: "mens-socks" },
-          "tees": { name: "T-Shirts", handle: "mens-tees" },
-          "sweatshirts": { name: "Sweatshirts", handle: "mens-sweatshirts" },
-          "hats": { name: "Hats", handle: "mens-hats" }
-        }
-      }
-    }
-  },
+ 
   women: {
     name: "Women",
     handle: "womens",

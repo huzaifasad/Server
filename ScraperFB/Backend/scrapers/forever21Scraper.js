@@ -28,21 +28,7 @@ const FOREVER21_CATEGORIES = {
       "plus-size": { name: "Plus Size", handle: "womens-plus-size-clothing" }
     }
   },
-  men: {
-    name: "Men",
-    handle: "mens-clothing",
-    subcategories: {
-      "new-arrivals": { name: "New Arrivals", handle: "mens-new-arrivals" },
-      "tees": { name: "T-Shirts", handle: "mens-tees" },
-      "shirts": { name: "Shirts", handle: "mens-shirts" },
-      "bottoms": { name: "Bottoms", handle: "mens-bottoms" },
-      "jeans": { name: "Jeans", handle: "mens-jeans" },
-      "activewear": { name: "Activewear", handle: "mens-activewear" },
-      "outerwear": { name: "Outerwear", handle: "mens-outerwear" },
-      "shoes": { name: "Shoes", handle: "mens-shoes" },
-      "accessories": { name: "Accessories", handle: "mens-accessories" }
-    }
-  }
+ 
 };
 
 // Normalize category path (accept both '.' and ' > ' separators)
