@@ -20,6 +20,7 @@ import {
   Eye 
 } from 'lucide-react';
 import CronJobForm from './components/CronJobForm';
+import CronJobsList from './components/CronJobsList';
 import ExecutionLogs from './components/ExecutionLogs';
 import BulkCronGenerator from './components/BulkCronGenerator';
 
@@ -168,7 +169,7 @@ export default function CronsPage() {
 
         {/* Bulk Generator */}
         {showBulkGenerator && (
-          <div className="mb-4 mt-10">
+          <div className="mb-4">
             <BulkCronGenerator 
               onComplete={() => {
                 setShowBulkGenerator(false);
