@@ -34,6 +34,8 @@ export default function CronsPage() {
   const [selectedJob, setSelectedJob] = useState(null);
   const [bulkDeleteMode, setBulkDeleteMode] = useState(false);
   const [selectedJobIds, setSelectedJobIds] = useState([]);
+  const [embeddingsLoading, setEmbeddingsLoading] = useState(false);
+  const [embeddingsResult, setEmbeddingsResult] = useState(null);
   const [stats, setStats] = useState({
     totalJobs: 0,
     activeJobs: 0,
@@ -145,6 +147,30 @@ export default function CronsPage() {
     }
   };
 
+  const handleGenerateEmbeddings = async () => {
+    setEmbeddingsLoading(true);
+    setEmbeddingsResult(null);
+    
+    try {
+      const response = await fetch('https://embeding.buythelook.us/api/generate-embeddings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const result = await response.json();
+      console.log('[v0] Embeddings result:', result);
+      setEmbeddingsResult(result);
+    } catch (error) {
+      console.error('[v0] Failed to generate embeddings:', error);
+      setEmbeddingsResult({ 
+        success: false, 
+        error: error.message 
+      });
+    } finally {
+      setEmbeddingsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -187,6 +213,15 @@ export default function CronsPage() {
               )}
               {!bulkDeleteMode && (
                 <>
+                  <Button 
+                    onClick={handleGenerateEmbeddings}
+                    size="sm" 
+                    variant="outline"
+                    className="h-7 text-xs bg-transparent"
+                    disabled={embeddingsLoading}
+                  >
+                    {embeddingsLoading ? 'Generating...' : 'Generate Embeddings'}
+                  </Button>
                   <Button 
                     onClick={() => setBulkDeleteMode(true)}
                     size="sm" 
@@ -378,6 +413,50 @@ export default function CronsPage() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        )}
+
+        {/* Embeddings Results Modal */}
+        {embeddingsResult && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <Card className="w-full max-w-lg max-h-[70vh] overflow-y-auto">
+              <CardHeader className="sticky top-0 bg-background border-b">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm">Embeddings Generation Result</CardTitle>
+                  <Button
+                    onClick={() => setEmbeddingsResult(null)}
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-xs"
+                  >
+                    Close
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-4">
+                {embeddingsResult.success !== false ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-green-600" />
+                      <span className="text-sm font-medium">Embeddings generated successfully</span>
+                    </div>
+                    <div className="bg-muted p-3 rounded-lg">
+                      <pre className="text-xs overflow-x-auto">
+                        {JSON.stringify(embeddingsResult, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5 text-red-600" />
+                      <span className="text-sm font-medium">Failed to generate embeddings</span>
+                    </div>
+                    <p className="text-xs text-red-600">{embeddingsResult.error}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         )}
 

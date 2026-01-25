@@ -1133,23 +1133,100 @@ app.post("/api/generate-embeddings", async (req, res) => {
       return "unknown"
     }
 
+    function extractColorFromName(productName) {
+      const colorKeywords = [
+        "white", "black", "red", "blue", "green", "yellow", "purple", "pink", "orange", "brown",
+        "gray", "grey", "navy", "beige", "cream", "gold", "silver", "bronze", "copper", "rose",
+        "coral", "teal", "turquoise", "aqua", "indigo", "burgundy", "maroon", "crimson", "olive",
+        "khaki", "tan", "taupe", "charcoal", "ivory", "pearl", "blush", "champagne", "nude"
+      ]
+      
+      const nameLower = (productName || "").toLowerCase()
+      for (const color of colorKeywords) {
+        if (nameLower.includes(color)) {
+          return color.charAt(0).toUpperCase() + color.slice(1)
+        }
+      }
+      return ""
+    }
+
+    function extractStyleKeywords(productName, description) {
+      const stylePatterns = {
+        details: ["tie front", "broderie detail", "embroidered", "printed", "striped", "polka dot", "floral", "sequin", "beaded", "pleated", "ruched", "draped", "wrap", "button-down", "zip", "collar", "pocket", "sleeve"],
+        fit: ["slim fit", "regular fit", "oversized", "fitted", "loose", "bodycon", "wide leg", "skinny", "straight leg", "tapered"],
+        style: ["casual", "formal", "vintage", "minimalist", "bohemian", "sporty", "elegant", "trendy", "classic", "edgy"]
+      }
+      
+      const combined = `${productName} ${description}`.toLowerCase()
+      const found = []
+      
+      for (const [category, keywords] of Object.entries(stylePatterns)) {
+        for (const keyword of keywords) {
+          if (combined.includes(keyword)) {
+            found.push(keyword)
+          }
+        }
+      }
+      
+      return found.length > 0 ? found.slice(0, 5).join(", ") : ""
+    }
+
+    function parseCategoryHierarchy(categoryName) {
+      if (!categoryName) return ""
+      // e.g., "Women > Clothing > Blouses" → extract useful parts
+      const parts = categoryName.split(">").map(p => p.trim())
+      // Return the most specific category (last part) plus parent if useful
+      const specific = parts[parts.length - 1] || ""
+      const parent = parts.length > 1 ? parts[parts.length - 2] : ""
+      
+      return [parent, specific].filter(p => p && p !== "Clothing").join(" ")
+    }
+
     function createEmbeddingText(product, category, occasions, formalityLevel, heelType) {
       const name = product.product_name || ""
-      const desc = (product.description || "").substring(0, 500)
-      const color = product.colour || product.color || ""
-      const brand = product.brand || ""
+      
+      // Extract color from product_name if colour field is empty
+      let color = product.colour || product.color || extractColorFromName(name)
+      
+      // Use both description and materials_description
+      const desc = (product.description || "").substring(0, 300)
+      const materials = (product.materials_description || "").substring(0, 300)
+      const fullDesc = [desc, materials].filter(d => d.trim() && !d.includes("Shop")).join(" ")
 
-      let text = `${name}. ${desc}`
-      text += ` This is a ${category} item.`
-      text += ` Suitable for: ${occasions.join(", ")}.`
-      text += ` Formality level: ${formalityLevel}.`
+      const brand = product.brand || ""
+      const family = product.product_family || ""
+      const styleKeywords = extractStyleKeywords(name, desc)
+      const categoryHierarchy = parseCategoryHierarchy(product.category_name)
+
+      let text = `${name}`
+      
+      // Add style keywords extracted from product name/description
+      if (styleKeywords) {
+        text += `. Details: ${styleKeywords}`
+      }
+      
+      // Add description if it's not just boilerplate
+      if (fullDesc && !fullDesc.includes("ASOS")) {
+        text += `. ${fullDesc}`
+      }
+      
+      // Add structured data
+      if (categoryHierarchy) {
+        text += `. Category: ${categoryHierarchy}`
+      } else {
+        text += `. This is a ${category} item`
+      }
+      
+      text += `. Suitable for: ${occasions.join(", ")}`
+      text += `. Formality: ${formalityLevel}`
 
       if (category === "shoes" && heelType !== "n/a") {
-        text += ` Heel type: ${heelType}.`
+        text += `. Heel type: ${heelType}`
       }
 
-      if (color) text += ` Color: ${color}.`
-      if (brand) text += ` Brand: ${brand}.`
+      if (color) text += `. Color: ${color}`
+      if (brand) text += `. Brand: ${brand}`
+      if (family) text += `. Type: ${family}`
 
       return text.trim()
     }
@@ -1161,8 +1238,7 @@ app.post("/api/generate-embeddings", async (req, res) => {
     const validProducts = allProducts.filter((p) => {
       const hasName = p.product_name?.trim() && p.product_name.length > 2
       const hasPrice = Number.parseFloat(p.price) > 0
-      const category = detectCategory(p)
-      return hasName && hasPrice && category !== "unknown"
+      return hasName && hasPrice
     })
     console.log(`   ✅ ${validProducts.length} valid products (removed ${allProducts.length - validProducts.length})\n`)
 
@@ -1183,7 +1259,7 @@ app.post("/api/generate-embeddings", async (req, res) => {
 
       const results = await Promise.all(
         batch.map(async (product) => {
-          const category = detectCategory(product)
+          const category = product.category_name || "unknown"
           const name = product.product_name || ""
           const desc = product.description || ""
 
