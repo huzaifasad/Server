@@ -270,81 +270,64 @@ async function executeCronJob(jobId, isManual = false) {
     
     // Wrap scraping in timeout promise
     const scrapingPromise = (async () => {
-      // PERFORMANCE OPTIMIZATION: Parallel category processing (4-6 categories at once for 8 CPU)
-      const PARALLEL_CATEGORIES = 3; // Adjust based on server resources (safe for 8 CPU/16GB)
-      const categoryChunks = [];
-      
-      for (let i = 0; i < job.category_paths.length; i += PARALLEL_CATEGORIES) {
-        categoryChunks.push(job.category_paths.slice(i, i + PARALLEL_CATEGORIES));
-      }
-      
-      console.log(`[v0] Processing ${job.category_paths.length} categories in ${categoryChunks.length} parallel batches (${PARALLEL_CATEGORIES} at a time)`);
-      
-      // Process each chunk of categories in parallel
-      for (const chunk of categoryChunks) {
-        const chunkPromises = chunk.map(async (categoryPath) => {
-          try {
-            console.log(`[v0] Scraping category: ${categoryPath}`);
-            
-            // Create a broadcast wrapper that includes cronId for log tracking
-            const cronBroadcast = (data) => {
-              broadcastProgress({
-                ...data,
-                cronId: jobId,
-                cronJobName: job.name,
-                category: categoryPath
-              });
-            };
-            
-            const results = await scrapeFunction(
-              null,
-              categoryPath,
-              {
-                mode: job.scrape_mode,
-                limit: job.limit_value,
-                startIndex: job.start_index,
-                endIndex: job.end_index
-              },
-              job.concurrency || 8, // Increase per-category concurrency too (8 products at once)
-              cronBroadcast,
-              currentCronStats
-            );
-            
-            // Handle different return formats: array (ASOS/Mango) or object with successful/failed (Forever21)
-            let productsCount = 0;
-            if (Array.isArray(results)) {
-              productsCount = results.length;
-            } else if (results?.successful) {
-              productsCount = results.successful.length;
-            }
-            
-            console.log(`[v0] Scraped ${categoryPath}: ${productsCount} products (Stats: ${currentCronStats.productsAdded} added, ${currentCronStats.productsUpdated} updated, ${currentCronStats.productsFailed} failed)`);
-            
-            categoriesProcessed.push({
-              path: categoryPath,
-              name: breadcrumbFunction(categoryPath),
-              products: productsCount,
-              status: 'success'
+      // Scrape each category
+      for (const categoryPath of job.category_paths) {
+        try {
+          console.log(`[v0] Scraping category: ${categoryPath}`);
+          
+          // Create a broadcast wrapper that includes cronId for log tracking
+          const cronBroadcast = (data) => {
+            broadcastProgress({
+              ...data,
+              cronId: jobId,
+              cronJobName: job.name,
+              category: categoryPath
             });
-            
-            return { categoryPath, success: true, productsCount };
-          } catch (error) {
-            console.error(`[v0] Failed to scrape ${categoryPath}:`, error.message, error.stack);
-            categoriesProcessed.push({
-              path: categoryPath,
-              name: breadcrumbFunction(categoryPath),
-              products: 0,
-              status: 'failed',
-              error: error.message
-            });
-            
-            return { categoryPath, success: false, error: error.message };
+          };
+          
+          const results = await scrapeFunction(
+            null,
+            categoryPath,
+            {
+              mode: job.scrape_mode,
+              limit: job.limit_value,
+              startIndex: job.start_index,
+              endIndex: job.end_index
+            },
+            job.concurrency,
+            cronBroadcast, // Pass broadcast function with cronId
+            currentCronStats
+          );
+          
+          // Handle different return formats: array (ASOS/Mango) or object with successful/failed (Forever21)
+          let productsCount = 0;
+          if (Array.isArray(results)) {
+            // ASOS/Mango format: simple array (they update stats internally)
+            productsCount = results.length;
+          } else if (results?.successful) {
+            // Forever21 format: { successful: [...], failed: [...] }
+            // Stats are now updated internally in Forever21 scraper (like ASOS/Mango)
+            productsCount = results.successful.length;
           }
-        });
-        
-        // Wait for all categories in this chunk to complete before moving to next chunk
-        const chunkResults = await Promise.all(chunkPromises);
-        console.log(`[v0] Completed batch: ${chunkResults.filter(r => r.success).length}/${chunkResults.length} categories successful`);
+          
+          console.log(`[v0] Scraped ${categoryPath}: ${productsCount} products (Stats: ${currentCronStats.productsAdded} added, ${currentCronStats.productsUpdated} updated, ${currentCronStats.productsFailed} failed)`);
+          
+          categoriesProcessed.push({
+            path: categoryPath,
+            name: breadcrumbFunction(categoryPath),
+            products: productsCount,
+            status: 'success'
+          });
+        } catch (error) {
+          console.error(`[v0] Failed to scrape ${categoryPath}:`, error.message, error.stack);
+          categoriesProcessed.push({
+            path: categoryPath,
+            name: breadcrumbFunction(categoryPath),
+            products: 0,
+            status: 'failed',
+            error: error.message
+          });
+        }
       }
     })();
     
@@ -1453,7 +1436,7 @@ app.get('/health', (req, res) => {
 // Start server and load cron jobs
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, async () => {
-  console.log(`🚀 Server running on port some categry 3 at a time ${PORT}`);
+  console.log(`🚀 Server running on port some updates ${PORT}`);
   console.log(`📡 WebSocket server ready`);
   await loadAndScheduleCronJobs();
 });
