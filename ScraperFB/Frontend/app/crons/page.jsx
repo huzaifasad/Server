@@ -1,12 +1,14 @@
 'use client';
 
+import Link from "next/link"
+
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import AppHeader from '@/components/app-header';
 import { 
   Plus, 
   Clock, 
@@ -18,9 +20,10 @@ import {
   Eye 
 } from 'lucide-react';
 import CronJobForm from './components/CronJobForm';
+import CronJobsList from './components/CronJobsList';
 import ExecutionLogs from './components/ExecutionLogs';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.buythelook.us';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export default function CronsPage() {
   const [jobs, setJobs] = useState([]);
@@ -103,26 +106,7 @@ export default function CronsPage() {
       <header className="border-b bg-card sticky top-0 z-50">
         <div className="container mx-auto px-4 py-2">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <h1 className="text-base font-bold tracking-tight">ASOS Scraper</h1>
-              <nav className="flex gap-1">
-                <Link href="/">
-                  <Button variant="ghost" size="sm" className="h-7 text-xs font-medium">
-                    Scraper
-                  </Button>
-                </Link>
-                <Link href="/products">
-                  <Button variant="ghost" size="sm" className="h-7 text-xs font-medium">
-                    Products
-                  </Button>
-                </Link>
-                <Link href="/crons">
-                  <Button variant="default" size="sm" className="h-7 text-xs font-medium">
-                    Schedules
-                  </Button>
-                </Link>
-              </nav>
-            </div>
+            <AppHeader isConnected={false} />
             <Button 
               onClick={() => setShowForm(!showForm)} 
               size="sm" 
