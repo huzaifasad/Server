@@ -27,7 +27,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
-const EMBEDDING_MODEL = "text-embedding-3-small"
+const EMBEDDING_MODEL = "text-embedding-3-large"
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -82,19 +82,29 @@ function buildSemanticQuery(query, occasion, category, style = null) {
 }
 
 /**
- * Generate embedding for query
+ * Generate embedding for query with retry logic
  */
-async function generateEmbedding(text) {
-  try {
-    const response = await openai.embeddings.create({
-      model: EMBEDDING_MODEL,
-      input: text.substring(0, 8000),
-    })
-    return response.data[0].embedding
-  } catch (error) {
-    console.error("❌ Embedding error:", error.message)
-    return null
+async function generateEmbedding(text, retries = 3) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const response = await openai.embeddings.create({
+        model: EMBEDDING_MODEL,
+        input: text.substring(0, 8000),
+      })
+      return response.data[0].embedding
+    } catch (error) {
+      if (attempt === retries) {
+        console.error(`❌ Embedding error after ${retries} attempts:`, error.message)
+        return null
+      }
+      
+      // Wait before retry (exponential backoff)
+      const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 10000)
+      console.log(`   ⚠️  Retry ${attempt}/${retries} after ${waitTime}ms...`)
+      await new Promise(r => setTimeout(r, waitTime))
+    }
   }
+  return null
 }
 
 /**
@@ -1116,22 +1126,64 @@ app.post("/api/generate-embeddings", async (req, res) => {
       return "flat"
     }
 
-    function detectCategory(product) {
-      const name = (product.product_name || "").toLowerCase()
-      const desc = (product.description || "").toLowerCase()
-      const combined = `${name} ${desc}`
-
-      if (/shirt|blouse|top|tank|tee|sweater|cardigan|hoodie|jacket|blazer|coat|vest/.test(combined)) {
-        return "tops"
-      }
-      if (/pant|jean|trouser|legging|short|skirt|jogger|culotte|cargo|chino/.test(combined)) {
-        return "bottoms"
-      }
-      if (/shoe|sneaker|boot|sandal|trainer|runner|loafer|heel|flat|pump/.test(combined)) {
-        return "shoes"
-      }
+function detectCategory(product) {
+  // PRIORITY 1: Use category_name field (most accurate)
+  const categoryName = (product.category_name || "").toLowerCase()
+  
+  if (categoryName) {
+    // Filter out ONLY true accessories - NOT swimwear bottoms
+    if (/accessori|wallet|keychain|\bbag\b|purse|jewelry|watch|\bbelt\b|\bhat\b|scarf|glove|sunglasses|bralette|\bthong\b(?!.*bodysuit)|underwear(?!.*dress)|lingerie(?!.*dress)|bikini\s*top|swim\s*top|necklace|bracelet|earring|\bring\b|cover[\s-]?up/i.test(categoryName)) {
       return "unknown"
     }
+    
+    // CHECK IN STRICT ORDER: shoes → bottoms → tops
+    // SHOES FIRST (most specific)
+    if (/shoe|boot|sneaker|trainer|sandal|heel|flat|pump|footwear/i.test(categoryName)) {
+      return "shoes"
+    }
+    
+    // BOTTOMS SECOND - flexible patterns without strict word boundaries
+    if (/pant|jean|trouser|legging|short(?!.*sleeve)|skirt|jogger|culotte|chino|sweatpant|palazzo|capri|skort|bottoms/i.test(categoryName)) {
+      return "bottoms"
+    }
+    
+    // TOPS LAST
+    if (/shirt|blouse|top|tank|tee|sweater|cardigan|hoodie|jacket|blazer|coat|vest|dress|gown|tunic|pullover|crop|cami|bodysuit/i.test(categoryName)) {
+      return "tops"
+    }
+  }
+  
+  // FALLBACK: Use product name and description
+  const name = (product.product_name || "").toLowerCase()
+  const desc = (product.description || "").toLowerCase()
+  const combined = `${name} ${desc}`
+  
+  // Filter ONLY true accessories - NOT clothing
+  if (/wallet|keychain|\bbag\b(?!gy)|purse|jewelry|watch|\bbelt\b(?!ed)|\bhat\b|scarf|glove(?!s?\b)|sunglasses|bralette|\bthong\b(?!.*bodysuit)|underwear(?!.*dress)|lingerie(?!.*dress)|bikini\s*top|swim\s*top|necklace|bracelet|earring|\bring\b(?!.*detail)|sarong|cover[\s-]?up/i.test(combined)) {
+    return "unknown"
+  }
+  
+  // CHECK IN STRICT ORDER: shoes → bottoms → tops
+  
+  // SHOES FIRST - flexible pattern
+  if (/shoe|boot|sneaker|trainer|sandal|pump|loafer|heel|flat|mule|clog|espadrille|oxford|derby|monk|brogue/i.test(combined)) {
+    return "shoes"
+  }
+  
+  // BOTTOMS SECOND - ULTRA FLEXIBLE (handles hyphens, compounds, modifiers)
+  // Matches: "Wide-Leg Jeans", "Cargo Pants", "Mini Skirt", "Bikini Bottoms"
+  if (/pant|jean|trouser|legging|short(?![s\-]*\s*sleeve)|skirt|jogger|culotte|chino|sweatpant|palazzo|capri|skort|bottoms/i.test(combined)) {
+    return "bottoms"
+  }
+  
+  // TOPS LAST - flexible pattern with modifiers
+  // Matches: "Mini Dress", "Tube Dress", "Strapless Dress", "Bodysuit"
+  if (/shirt|blouse|top(?!knot)|tank|tee|sweater|cardigan|hoodie|jacket|blazer|coat|vest|dress|gown|tunic|poncho|pullover|crop|halter|cami|romper|jumpsuit|bodysuit/i.test(combined)) {
+    return "tops"
+  }
+  
+  return "unknown"
+  }
 
     function extractColorFromName(productName) {
       const colorKeywords = [
@@ -1243,10 +1295,10 @@ app.post("/api/generate-embeddings", async (req, res) => {
     console.log(`   ✅ ${validProducts.length} valid products (removed ${allProducts.length - validProducts.length})\n`)
 
     // ========================================================================
-    // STEP 6: GENERATE EMBEDDINGS
+    // STEP 6: GENERATE EMBEDDINGS (OPTIMIZED)
     // ========================================================================
-    console.log("5️⃣  Generating embeddings with OpenAI...")
-    const BATCH_SIZE = 50
+    console.log("5️⃣  Generating embeddings with OpenAI (optimized)...")
+    const BATCH_SIZE = 100 // Increased from 50 to 100 for faster processing
     const productsWithEmbeddings = []
     let embeddingCount = 0
 
@@ -1259,41 +1311,58 @@ app.post("/api/generate-embeddings", async (req, res) => {
 
       const results = await Promise.all(
         batch.map(async (product) => {
-          const category = product.category_name || "unknown"
-          const name = product.product_name || ""
-          const desc = product.description || ""
+          try {
+            // Use detectCategory function instead of category_name (which may not exist)
+            const category = detectCategory(product)
+            const name = product.product_name || ""
+            const desc = product.description || ""
 
-          const occasions = detectSuitableOccasions(name, desc)
-          const formalityLevel = detectFormalityLevel(name, desc, occasions)
-          const heelType = detectHeelType(name, desc, category)
+            // Skip products with unknown category
+            if (category === "unknown") {
+              console.log(`   ⚠️  Skipping product with unknown category: ${name.substring(0, 50)}`)
+              return null
+            }
 
-          const embeddingText = createEmbeddingText(product, category, occasions, formalityLevel, heelType)
-          const embedding = await generateEmbedding(embeddingText)
+            const occasions = detectSuitableOccasions(name, desc)
+            const formalityLevel = detectFormalityLevel(name, desc, occasions)
+            const heelType = detectHeelType(name, desc, category)
 
-          if (embedding) embeddingCount++
+            const embeddingText = createEmbeddingText(product, category, occasions, formalityLevel, heelType)
+            const embedding = await generateEmbedding(embeddingText)
 
-          return {
-            product_id: product.id,
-            product_name: product.product_name,
-            description: product.description,
-            price: product.price,
-            brand: product.brand,
-            color: product.colour || product.color,
-            category: category,
-            suitableOccasions: occasions,
-            formalityLevel: formalityLevel,
-            heelType: heelType,
-            embedding: embedding,
+            if (embedding) embeddingCount++
+
+            // Use both product.id and product.product_id for compatibility
+            const productId = product.product_id || product.id
+
+            return {
+              product_id: productId,
+              product_name: product.product_name,
+              description: product.description,
+              price: product.price,
+              brand: product.brand,
+              color: product.colour || product.color,
+              category: category,
+              suitableOccasions: occasions,
+              formalityLevel: formalityLevel,
+              heelType: heelType,
+              embedding: embedding,
+            }
+          } catch (error) {
+            console.error(`   ❌ Error processing product "${product.product_name}":`, error.message)
+            return null
           }
         }),
       )
 
-      productsWithEmbeddings.push(...results)
-      console.log(`      ✅ Generated ${results.filter((r) => r.embedding).length} embeddings`)
+      // Filter out nulls
+      const validResults = results.filter(r => r !== null && r.embedding !== null)
+      productsWithEmbeddings.push(...validResults)
+      console.log(`      ✅ Generated ${validResults.length} embeddings`)
 
-      // Rate limiting
+      // Reduced rate limiting from 1000ms to 200ms (5x faster between batches)
       if (i + BATCH_SIZE < validProducts.length) {
-        await new Promise((r) => setTimeout(r, 1000))
+        await new Promise((r) => setTimeout(r, 200))
       }
     }
 
@@ -1305,33 +1374,56 @@ app.post("/api/generate-embeddings", async (req, res) => {
     console.log("6️⃣  Importing to Weaviate...")
 
     let successCount = 0
+    let failedCount = 0
     for (let i = 0; i < productsWithEmbeddings.length; i += BATCH_SIZE) {
       const batch = productsWithEmbeddings.slice(i, i + BATCH_SIZE).filter((p) => p.embedding)
 
-      let batcher = weaviateClient.batch.objectsBatcher()
+      try {
+        let batcher = weaviateClient.batch.objectsBatcher()
 
-      for (const product of batch) {
-        batcher = batcher.withObject({
-          class: "Product",
-          properties: {
-            product_id: product.product_id,
-            product_name: product.product_name || "Unknown",
-            description: (product.description || "").substring(0, 1000),
-            price: Number.parseFloat(product.price) || 0,
-            category: product.category || "unknown",
-            brand: product.brand || "Unknown",
-            color: product.color || "N/A",
-            suitableOccasions: product.suitableOccasions || ["everyday"],
-            formalityLevel: product.formalityLevel || "casual",
-            heelType: product.heelType || "n/a",
-          },
-          vector: product.embedding,
-        })
+        for (const product of batch) {
+          // Convert product_id to string to ensure compatibility
+          const productIdStr = String(product.product_id)
+          
+          batcher = batcher.withObject({
+            class: "Product",
+            properties: {
+              product_id: productIdStr,
+              product_name: product.product_name || "Unknown",
+              description: (product.description || "").substring(0, 1000),
+              price: Number.parseFloat(product.price) || 0,
+              category: product.category || "unknown",
+              brand: product.brand || "Unknown",
+              color: product.color || "N/A",
+              suitableOccasions: product.suitableOccasions || ["everyday"],
+              formalityLevel: product.formalityLevel || "casual",
+              heelType: product.heelType || "n/a",
+            },
+            vector: product.embedding,
+          })
+        }
+
+        const result = await batcher.do()
+        
+        // Check for errors in batch result
+        if (result && result.length > 0) {
+          const errors = result.filter(r => r.result?.errors)
+          if (errors.length > 0) {
+            console.log(`   ⚠️  ${errors.length} errors in batch`)
+            failedCount += errors.length
+          }
+        }
+        
+        successCount += batch.length
+        console.log(`   ✅ Imported ${successCount}/${productsWithEmbeddings.filter((p) => p.embedding).length}`)
+      } catch (error) {
+        console.error(`   ❌ Batch import error:`, error.message)
+        failedCount += batch.length
       }
-
-      await batcher.do()
-      successCount += batch.length
-      console.log(`   ✅ Imported ${successCount}/${productsWithEmbeddings.filter((p) => p.embedding).length}`)
+    }
+    
+    if (failedCount > 0) {
+      console.log(`\n   ⚠️  ${failedCount} products failed to import\n`)
     }
 
     // ========================================================================

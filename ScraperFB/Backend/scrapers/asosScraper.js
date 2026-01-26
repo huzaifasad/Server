@@ -77,7 +77,6 @@ const ASOS_CATEGORIES = {
       "wedges": { name: "Wedges", url: "/women/sandals/wedges/cat/?cid=10266" }
     }
   },
- 
 
 };
 
@@ -224,6 +223,46 @@ export async function scrapeASOS(
     await page.setViewport({ width: 1920, height: 1080 });
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     
+    // SET US REGION COOKIES BEFORE NAVIGATION
+    await page.setCookie(
+      {
+        name: 'browseCountry',
+        value: 'US',
+        domain: '.asos.com',
+        path: '/',
+        httpOnly: false,
+        secure: true,
+        sameSite: 'Lax'
+      },
+      {
+        name: 'browseCurrency',
+        value: 'USD',
+        domain: '.asos.com',
+        path: '/',
+        httpOnly: false,
+        secure: true,
+        sameSite: 'Lax'
+      },
+      {
+        name: 'browseLanguage',
+        value: 'en-US',
+        domain: '.asos.com',
+        path: '/',
+        httpOnly: false,
+        secure: true,
+        sameSite: 'Lax'
+      },
+      {
+        name: 'storeCode',
+        value: 'COM',
+        domain: '.asos.com',
+        path: '/',
+        httpOnly: false,
+        secure: true,
+        sameSite: 'Lax'
+      }
+    );
+
     await page.setExtraHTTPHeaders({
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
       'Accept-Encoding': 'gzip, deflate, br',
@@ -249,17 +288,17 @@ export async function scrapeASOS(
 
     broadcastProgress({
       type: 'info',
-      message: 'Navigating to ASOS homepage...'
+      message: 'Navigating to ASOS US homepage...'
     });
     
-    // Navigation with retry logic
+    // Navigation with retry logic - USE US DOMAIN
     let navigationSuccess = false;
     let retryCount = 0;
     const maxRetries = 3;
     
     while (!navigationSuccess && retryCount < maxRetries) {
       try {
-        await page.goto('https://www.asos.com', {
+        await page.goto('https://us.asos.com', {
           waitUntil: "networkidle2",
           timeout: 60000
         });
@@ -281,10 +320,10 @@ export async function scrapeASOS(
     let categoryInfo = null;
     
     if (isSearchMode) {
-      targetUrl = `https://www.asos.com/search/?q=${encodeURIComponent(searchTerm)}`;
+      targetUrl = `https://us.asos.com/search/?q=${encodeURIComponent(searchTerm)}`;
       broadcastProgress({
         type: 'info',
-        message: `Navigating to search page for "${searchTerm}"...`
+        message: `Navigating to US search page for "${searchTerm}"...`
       });
     } else {
       const category = getCategoryPath(ASOS_CATEGORIES, categoryPath);
@@ -293,13 +332,13 @@ export async function scrapeASOS(
         throw new Error(`Invalid category path: ${categoryPath}. Category not found in ASOS_CATEGORIES.`);
       }
       
-      targetUrl = `https://www.asos.com${category.url}`;
+      targetUrl = `https://us.asos.com${category.url}`;
       const breadcrumb = buildCategoryBreadcrumb(categoryPath);
       categoryInfo = { breadcrumb, path: categoryPath };
       
       broadcastProgress({
         type: 'info',
-        message: `Navigating to category page: "${breadcrumb}"...`
+        message: `Navigating to US category page: "${breadcrumb}"...`
       });
     }
     
@@ -369,12 +408,12 @@ export async function scrapeASOS(
       throw new Error('Could not find product tiles with any selector');
     }
 
-    // Load all products if needed
+    // OPTIMIZED: Chunked loading and scraping for full/range mode
     if (options.mode === "full" || options.mode === "range") {
-      await loadAllProducts(page, broadcastProgress);
+      return await scrapeWithChunkedLoading(browser, page, productSelector, categoryInfo, options, concurrency, broadcastProgress, currentCronStats);
     }
 
-    // Extract product links
+    // For "limit" mode, use old approach (load first batch only)
     const linkSelectors = [
       `${productSelector} a.productLink_KM4PI`,
       `${productSelector} a[href*="/prd/"]`,
@@ -424,8 +463,6 @@ export async function scrapeASOS(
     let finalLinks = productLinks;
     if (options.mode === "limit" && options.limit) {
       finalLinks = productLinks.slice(0, options.limit);
-    } else if (options.mode === "range" && options.startIndex !== undefined && options.endIndex !== undefined) {
-      finalLinks = productLinks.slice(options.startIndex, options.endIndex + 1);
     }
 
     broadcastProgress({
@@ -461,7 +498,162 @@ export async function scrapeASOS(
   }
 }
 
-// Load all products helper (FIXED: Now handles ASOS infinite scroll properly)
+// SMART PARALLEL: Rolling load ahead of scraping (scrape immediately, trigger loads at 60, 120, 180...)
+async function scrapeWithChunkedLoading(browser, page, productSelector, categoryInfo, options, concurrency, broadcastProgress, currentCronStats) {
+  const LOAD_TRIGGER_INTERVAL = 60; // Trigger next load every 60 products scraped
+  
+  broadcastProgress({
+    type: 'info',
+    message: 'Starting smart parallel scraping (scraping + loading in background)...'
+  });
+
+  const linkSelectors = [
+    `${productSelector} a.productLink_KM4PI`,
+    `${productSelector} a[href*="/prd/"]`,
+    `${productSelector} a[data-testid="product-link"]`,
+    `${productSelector} a`
+  ];
+
+  const results = [];
+  let scrapedCount = 0;
+  let nextLoadTrigger = LOAD_TRIGGER_INTERVAL;
+  let loadingInProgress = false;
+  let noMoreProducts = false;
+  
+  const getProductLinks = async () => {
+    for (const linkSel of linkSelectors) {
+      try {
+        const links = await page.$$eval(linkSel, (links) =>
+          links.map((a) => a.href).filter(href => href && href.includes('/prd/'))
+        );
+        if (links.length > 0) {
+          return [...new Set(links)];
+        }
+      } catch (e) {}
+    }
+    return [];
+  };
+
+  // Background loader - triggers load more when needed
+  const triggerLoadMore = async () => {
+    if (loadingInProgress || noMoreProducts) return;
+    
+    loadingInProgress = true;
+    
+    try {
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await randomDelay(1500, 2500);
+
+      const btn = await page.$(
+        "a.loadButton_wWQ3F, [data-auto-id='loadMoreProducts'], [data-testid='load-more-button'], button[class*='load'], button[class*='more']"
+      );
+
+      if (btn) {
+        broadcastProgress({
+          type: 'progress',
+          message: `🔄 Loading more products in background (scraped: ${scrapedCount})...`
+        });
+        
+        await btn.click();
+        await randomDelay(3000, 5000);
+        
+        const newLinks = await getProductLinks();
+        broadcastProgress({
+          type: 'info',
+          message: `✓ Background load complete - ${newLinks.length} products now available`
+        });
+      } else {
+        noMoreProducts = true;
+        broadcastProgress({
+          type: 'info',
+          message: 'No more products to load - will scrape remaining'
+        });
+      }
+    } catch (e) {
+      console.log(`[v0] Background load error: ${e.message}`);
+    } finally {
+      loadingInProgress = false;
+    }
+  };
+
+  // Get initial products
+  const allLinks = await getProductLinks();
+  
+  if (allLinks.length === 0) {
+    throw new Error('No product links found');
+  }
+
+  broadcastProgress({
+    type: 'success',
+    message: `Found ${allLinks.length} initial products - starting scrape...`
+  });
+
+  // Main scraping loop - continuous scraping
+  while (true) {
+    const currentLinks = await getProductLinks();
+    const unscrapedLinks = currentLinks.slice(scrapedCount);
+
+    // Check if we've reached load trigger milestone
+    if (scrapedCount >= nextLoadTrigger && !noMoreProducts) {
+      triggerLoadMore(); // Fire and forget - don't wait
+      nextLoadTrigger += LOAD_TRIGGER_INTERVAL;
+      broadcastProgress({
+        type: 'info',
+        message: `📍 Milestone ${scrapedCount} - next load trigger at ${nextLoadTrigger}`
+      });
+    }
+
+    // No more products to scrape
+    if (unscrapedLinks.length === 0) {
+      // Wait a bit for background load to complete
+      if (!noMoreProducts && loadingInProgress) {
+        await sleep(3000);
+        continue;
+      }
+      break;
+    }
+
+    // Scrape available products (in batches of concurrency)
+    const batch = unscrapedLinks.slice(0, concurrency);
+    
+    const batchResults = await Promise.all(
+      batch.map((link, idx) => 
+        scrapeProduct(browser, link, scrapedCount + idx, currentLinks.length, categoryInfo, broadcastProgress, currentCronStats)
+      )
+    );
+    
+    results.push(...batchResults.filter(r => r !== null));
+    scrapedCount += batch.length;
+    
+    // Apply range/limit filters
+    if (options.mode === "range" && options.endIndex !== undefined && scrapedCount >= options.endIndex + 1) {
+      broadcastProgress({
+        type: 'info',
+        message: `Reached range end index (${options.endIndex}). Stopping scrape.`
+      });
+      break;
+    }
+
+    await sleep(2000);
+  }
+
+  await browser.close();
+
+  // Apply filters if needed
+  let finalResults = results;
+  if (options.mode === "range" && options.startIndex !== undefined && options.endIndex !== undefined) {
+    finalResults = results.slice(options.startIndex, options.endIndex + 1);
+  }
+
+  broadcastProgress({
+    type: 'success',
+    message: `Smart parallel scraping completed! Scraped ${finalResults.length} products successfully.`
+  });
+
+  return finalResults;
+}
+
+// Load all products helper (LEGACY: Used only for "limit" mode)
 async function loadAllProducts(page, broadcastProgress) {
   let lastCount = 0, clicks = 0, noChangeCount = 0;
   
@@ -470,7 +662,7 @@ async function loadAllProducts(page, broadcastProgress) {
     message: 'Loading all products from category...'
   });
   
-  while (noChangeCount < 3) { // Try 3 times even if count doesn't change
+  while (noChangeCount < 3) {
     const currentCount = await page
       .$$eval("li.productTile_U0clN, [data-testid='product-tile']", els => els.length)
       .catch(() => 0);
@@ -482,15 +674,13 @@ async function loadAllProducts(page, broadcastProgress) {
         message: `No new products loaded (${noChangeCount}/3 attempts). Current: ${currentCount}`
       });
     } else {
-      noChangeCount = 0; // Reset counter when products load
+      noChangeCount = 0;
       lastCount = currentCount;
     }
 
-    // Try to scroll to bottom first (ASOS uses infinite scroll)
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await randomDelay(2000, 3000);
 
-    // Then look for load more button
     const btn = await page.$(
       "a.loadButton_wWQ3F, [data-auto-id='loadMoreProducts'], [data-testid='load-more-button'], button[class*='load'], button[class*='more']"
     );
@@ -499,7 +689,7 @@ async function loadAllProducts(page, broadcastProgress) {
       clicks++;
       broadcastProgress({
         type: 'progress',
-        message: `Loading more products... (Click ${clicks} - Total visible: ${currentCount})`
+        message: `Loading more products... (Click ${clicks} - Total visible: ${lastCount})`
       });
 
       try {
@@ -512,7 +702,6 @@ async function loadAllProducts(page, broadcastProgress) {
         });
       }
     } else {
-      // No button found, just scroll and wait
       await randomDelay(2000, 3000);
     }
   }
@@ -687,80 +876,32 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
       product_id = 'asos_' + btoa(urlHash).slice(0, 20).replace(/[^a-zA-Z0-9]/g, '');
     }
     
-    // Smart occasion detection based on category, name, and description
-    const detectOccasions = () => {
-      const textLower = `${name} ${description || ''} ${category || ''}`.toLowerCase();
-      const occasions = [];
-      
-      // Party/Evening occasions
-      if (textLower.match(/party|evening|cocktail|formal|gown|sequin|glitter|sparkle/i)) {
-        occasions.push('party');
-      }
-      if (textLower.match(/wedding|formal|ceremony|gala|prom|ball/i)) {
-        occasions.push('formal');
-      }
-      
-      // Work/Professional
-      if (textLower.match(/work|office|professional|business|blazer|suit/i)) {
-        occasions.push('work');
-      }
-      
-      // Casual/Everyday
-      if (textLower.match(/casual|everyday|comfort|relax|lounge|basic/i)) {
-        occasions.push('everyday');
-        occasions.push('casual');
-      }
-      
-      // Date/Night out
-      if (textLower.match(/date|night out|going out|club/i)) {
-        occasions.push('date');
-      }
-      
-      // Vacation/Beach
-      if (textLower.match(/vacation|beach|resort|swim|summer|tropical/i)) {
-        occasions.push('vacation');
-      }
-      
-      // Workout/Active
-      if (textLower.match(/workout|gym|sport|active|running|yoga|fitness|athletic/i)) {
-        occasions.push('workout');
-      }
-      
-      // Default to casual/everyday if no specific occasion detected
-      if (occasions.length === 0) {
-        occasions.push('everyday', 'casual');
-      }
-      
-      return [...new Set(occasions)]; // Remove duplicates
-    };
-    
-    return {
-      name,
-      description,
-      brand,
-      category,
-      price: priceValue,
-      currency,
-      stock_status,
-      availability,
-      materials: materialsText,
-      care_info,
-      size: size ? size.join(", ") : null,
-      color: colors.join(", "),
-      images,
-      product_url: window.location.href,
-      product_id: product_id, // No random fallback - always deterministic
-      colour_code: Math.floor(Math.random() * 1000),
-      section: null,
-      product_family: category?.toUpperCase() || "CLOTHING",
-      product_family_en: category || "Clothing",
-      product_subfamily: null,
-      dimension: null,
-      low_on_stock: !availability,
-      sku: null,
-      occasions: detectOccasions()
-    };
-  });
+      return {
+        name,
+        description,
+        brand,
+        category,
+        price: priceValue,
+        currency,
+        stock_status,
+        availability,
+        materials: materialsText,
+        care_info,
+        size: size ? size.join(", ") : null,
+        color: colors.join(", "),
+        images,
+        product_url: window.location.href,
+        product_id: product_id, // No random fallback - always deterministic
+        colour_code: Math.floor(Math.random() * 1000),
+        section: null,
+        product_family: category?.toUpperCase() || "CLOTHING",
+        product_family_en: category || "Clothing",
+        product_subfamily: null,
+        dimension: null,
+        low_on_stock: !availability,
+        sku: null
+      };
+    });
 
     if (categoryInfo) {
       data.scraped_category = categoryInfo.breadcrumb;
@@ -796,17 +937,21 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
 
   // Insert to database with all fields including occasions
   try {
-    const insertData = {
-      product_id: String(data.product_id),
-      product_name: data.name,
-      brand: data.brand || 'ASOS',
-      category_name: categoryInfo?.breadcrumb || data.category || 'Uncategorized',
-      category_id: String(0),
-      section: data.section,
-      product_family: data.product_family,
-      product_subfamily: data.product_subfamily,
-      product_family_en: data.product_family_en,
-      clothing_category: data.category,
+  // Map category to outfit type (tops/bottoms/shoes)
+  const outfitCategory = mapCategoryToOutfitType(categoryInfo?.breadcrumb || data.category || '');
+  
+  const insertData = {
+  product_id: String(data.product_id),
+  product_name: data.name,
+  brand: data.brand || 'ASOS',
+  category_name: categoryInfo?.breadcrumb || data.category || 'Uncategorized',
+  outfit_category: outfitCategory, // NEW: tops, bottoms, or shoes
+  category_id: String(0),
+  section: data.section,
+  product_family: data.product_family,
+  product_subfamily: data.product_subfamily,
+  product_family_en: data.product_family_en,
+  clothing_category: data.category,
       
       price: data.price,
       currency: data.currency || 'GBP',
@@ -820,7 +965,6 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
       low_on_stock: data.low_on_stock,
       availability: data.availability,
       sku: data.sku,
-      occasions: data.occasions || [],
       
       url: data.product_url,
       image: data.images && data.images.length > 0 ? data.images.map(url => ({ url })) : [],
@@ -885,5 +1029,20 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
     return null;
   } finally {
     await page.close();
+  }
+}
+
+// Function to map category to outfit type
+function mapCategoryToOutfitType(category) {
+  const categoryLower = category.toLowerCase();
+  
+  if (categoryLower.includes('shoes')) {
+    return 'shoes';
+  } else if (categoryLower.includes('bottoms') || categoryLower.includes('trousers') || categoryLower.includes('jeans') || categoryLower.includes('skirts') || categoryLower.includes('shorts')) {
+    return 'bottoms';
+  } else if (categoryLower.includes('tops') || categoryLower.includes('shirts') || categoryLower.includes('t-shirts') || categoryLower.includes('jackets') || categoryLower.includes('blazers') || categoryLower.includes('dresses')) {
+    return 'tops';
+  } else {
+    return 'uncategorized';
   }
 }
