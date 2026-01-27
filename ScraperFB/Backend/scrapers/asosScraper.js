@@ -77,6 +77,10 @@ const ASOS_CATEGORIES = {
       "wedges": { name: "Wedges", url: "/women/sandals/wedges/cat/?cid=10266" }
     }
   },
+  workout:{
+    name: 'workout',
+    url:'/search/?q=workout&refine=floor:1000,2001'
+  }
 
 };
 
