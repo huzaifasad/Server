@@ -84,6 +84,7 @@ const ASOS_CATEGORIES = {
 
 };
 
+
 // Export categories and functions
 export { ASOS_CATEGORIES };
 
@@ -502,9 +503,9 @@ export async function scrapeASOS(
   }
 }
 
-// SMART PARALLEL: Rolling load ahead of scraping (scrape immediately, trigger loads at 60, 120, 180...)
-async function scrapeWithChunkedLoading(browser, page, productSelector, categoryInfo, options, concurrency, broadcastProgress, currentCronStats) {
-  const LOAD_TRIGGER_INTERVAL = 60; // Trigger next load every 60 products scraped
+  // SMART PARALLEL: Rolling load ahead of scraping (scrape immediately, trigger loads at 40, 80, 120...)
+  async function scrapeWithChunkedLoading(browser, page, productSelector, categoryInfo, options, concurrency, broadcastProgress, currentCronStats) {
+  const LOAD_TRIGGER_INTERVAL = 40; // FIX: Reduced from 60 to 40 - trigger next load every 40 products scraped
   
   broadcastProgress({
     type: 'info',
@@ -591,29 +592,52 @@ async function scrapeWithChunkedLoading(browser, page, productSelector, category
     type: 'success',
     message: `Found ${allLinks.length} initial products - starting scrape...`
   });
+  
+  // FIX: Trigger first load immediately so more products are loading while we scrape the first 50
+  if (allLinks.length >= 40) {
+    console.log(`[v0] Triggering early background load (initial batch has ${allLinks.length} products)`)
+    triggerLoadMore();
+    nextLoadTrigger = 40; // Next trigger at 40 scraped
+  }
 
   // Main scraping loop - continuous scraping
   while (true) {
     const currentLinks = await getProductLinks();
     const unscrapedLinks = currentLinks.slice(scrapedCount);
 
-    // Check if we've reached load trigger milestone
+    // FIX: Check if we've reached load trigger milestone (reduced from 60 to 40)
     if (scrapedCount >= nextLoadTrigger && !noMoreProducts) {
       triggerLoadMore(); // Fire and forget - don't wait
-      nextLoadTrigger += LOAD_TRIGGER_INTERVAL;
+      nextLoadTrigger += 40; // Reduced from 60 to trigger more frequently
       broadcastProgress({
         type: 'info',
         message: `📍 Milestone ${scrapedCount} - next load trigger at ${nextLoadTrigger}`
       });
     }
 
-    // No more products to scrape
+    // FIX: No more products to scrape - wait longer for background load
     if (unscrapedLinks.length === 0) {
-      // Wait a bit for background load to complete
+      // Wait longer for background load to complete
       if (!noMoreProducts && loadingInProgress) {
-        await sleep(3000);
+        broadcastProgress({
+          type: 'info',
+          message: `⏳ Waiting for background load to complete... (${scrapedCount} scraped)`
+        });
+        await sleep(5000); // Increased from 3000 to 5000ms
         continue;
       }
+      
+      // FIX: Try one more load before giving up
+      if (!noMoreProducts && !loadingInProgress) {
+        broadcastProgress({
+          type: 'info',
+          message: `🔄 No unscraped products - triggering final load attempt...`
+        });
+        await triggerLoadMore();
+        await sleep(5000);
+        continue;
+      }
+      
       break;
     }
 
