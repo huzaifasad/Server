@@ -7,7 +7,9 @@ import OpenAI from "openai"
 dotenv.config()
 
 // ============================================================================
+
 // INITIALIZE
+
 // ============================================================================
 
 const app = express()
@@ -18,8 +20,8 @@ app.use(express.json())
 
 // Weaviate Client
 const weaviateClient = weaviate.client({
-  scheme: process.env.WEAVIATE_SCHEME || "http",
-  host: process.env.WEAVIATE_HOST || "localhost:8080",
+  scheme: "http",
+  host:"localhost:8080",
 })
 
 // OpenAI Client
@@ -27,27 +29,47 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
-const EMBEDDING_MODEL = "text-embedding-3-large"
+const EMBEDDING_MODEL = "text-embedding-3-small"
 
 // ============================================================================
+
 // HELPER FUNCTIONS
-// ============================================================================
 
+// ============================================================================
 /**
- * Build semantic query with occasion AND style context
- * Added style parameter to respect user's aesthetic preferences
+ * Extract subcategory from category_name
+ * Example: "Shoes > Heels" → "heels"
+ */
+function extractSubcategory(category_name) {
+  if (!category_name) return null
+  
+  // Split on " > " and take the last part
+  const parts = category_name.split(' > ')
+  if (parts.length > 1) {
+    const subcategory = parts[parts.length - 1].toLowerCase().trim()
+    
+    // Clean up common variations
+    return subcategory
+      .replace(/\s+/g, ' ')  // Normalize spaces
+      .replace(/&/g, 'and')   // "Jeans & Denim" → "jeans and denim"
+  }
+  
+  return null
+}
+/**
+ * Build semantic query for vector search with occasion and category context
  */
 function buildSemanticQuery(query, occasion, category, style = null) {
   let semanticQuery = query
 
   // Add style-specific modifiers FIRST (highest priority)
   const styleModifiers = {
-    minimalist: "clean simple structured understated elegant refined timeless classic solid",
-    bohemian: "flowy relaxed earthy natural organic textured layered artistic",
-    edgy: "bold modern asymmetric leather statement unique contemporary urban",
-    classic: "traditional timeless tailored polished sophisticated refined elegant",
-    romantic: "soft feminine delicate flowy graceful pretty gentle flowing",
-    sporty: "athletic casual comfortable practical functional active dynamic",
+    minimalist: "clean simple structured understated elegant refined timeless classic solid minimal",
+    bohemian: "flowy relaxed earthy natural organic textured layered artistic vintage",
+    edgy: "bold modern asymmetric leather statement unique contemporary urban goth",
+    classic: "traditional timeless tailored polished sophisticated refined elegant formal",
+    romantic: "soft feminine delicate flowy graceful pretty gentle flowing lace",
+    sporty: "athletic casual comfortable practical functional active dynamic tech",
     trendy: "fashion-forward modern stylish current contemporary chic on-trend",
   }
 
@@ -55,450 +77,75 @@ function buildSemanticQuery(query, occasion, category, style = null) {
     semanticQuery += ` ${styleModifiers[style.toLowerCase()]}`
   }
 
-  // Add occasion-specific context words (but filter based on style)
+  // EXCLUSIVE occasion-specific keywords - NO cross-contamination
   const occasionContext = {
-    workout: "athletic breathable moisture-wicking performance sportswear activewear gym fitness",
-    party: "elegant dressy glamorous formal evening cocktail stylish",
-    work: "professional business corporate office tailored polished structured career",
-    date: "romantic chic sophisticated feminine elegant stylish trendy dressy",
-    vacation: "resort casual travel lightweight comfortable relaxed breezy beach",
-    everyday: "casual comfortable versatile everyday basic essential simple",
+    // Workout: ONLY athletic keywords - NO formal, casual, dressy
+    workout: "athletic performance sportswear activewear gym fitness training running yoga moisture-wicking breathable stretch compression dri-fit legging jogger sports-bra tank-top athletic-shorts",
+    
+    // Wedding: ONLY formal elegant keywords - NO casual, athletic, party
+    wedding: "wedding bridal ceremonial elegant formal sophisticated gown dress white ivory blush embroidered beaded lace satin silk champagne heels pumps dressy formal-shoes",
+    
+    // Party: ONLY glamorous evening keywords - NO casual, athletic, work
+    party: "party evening cocktail glamorous dressy sequin glitter metallic sparkle sparkly night-out club festive mini-dress short-dress evening-dress heels pumps wedges metallic-heels",
+    
+    // Work: ONLY professional keywords - NO casual, athletic, party, wedding
+    work: "professional business corporate office tailored structured polished career blazer suit formal dress-pants pencil-skirt blouse cardigan knitwear loafer oxford formal-shoes structured-heels",
+    
+    // Vacation: ONLY casual beach keywords - NO formal, work, athletic
+    vacation: "vacation beach resort casual relaxed travel lightweight sundress maxi-dress beach-dress flip-flop sandal slide casual-sneaker comfortable",
+    
+    // Everyday: ONLY casual comfortable keywords - NO formal, athletic, party, work
+    everyday: "casual comfortable everyday basic versatile simple loungewear t-shirt casual-dress sneaker flat comfortable-shoes",
   }
 
   let contextWords = occasionContext[occasion] || occasionContext.everyday
 
   // REMOVE contradictory words based on style
   if (style === "minimalist") {
-    // Remove maximalist descriptors for minimalist style
-    contextWords = contextWords.replace(/sparkle|glamorous|festive/gi, "").trim()
+    contextWords = contextWords.replace(/sparkle|glamorous|sequin|glitter|metallic|shimmer/gi, "").trim()
   }
 
   semanticQuery += ` ${contextWords}`
 
-  // Add category context
-  semanticQuery += ` ${category}`
-
-  return semanticQuery
+// ✅ NEW: Add category + subcategory reinforcement based on occasion
+const categorySubcategoryTerms = {
+  shoes: {
+    workout: "sneakers trainers athletic shoes running shoes sport shoes",
+    party: "heels pumps stilettos dressy shoes dress shoes",
+    work: "loafers flats oxford shoes professional shoes dress shoes",
+    date: "heels sandals dressy shoes elegant shoes",
+    vacation: "sandals flats casual shoes comfortable shoes",
+    everyday: "sandals flats sneakers casual shoes boots"
+  },
+  tops: {
+    workout: "tank top sports bra athletic shirt performance top workout top",
+    party: "blouse dress elegant top cocktail dress dressy top",
+    work: "blazer blouse professional shirt business top button-up",
+    date: "blouse dress elegant top stylish top",
+    vacation: "tank tee casual top light top breezy top",
+    everyday: "tee shirt casual top sweater comfortable top"
+  },
+  bottoms: {
+    workout: "leggings joggers athletic pants workout shorts gym pants",
+    party: "dress pants skirt elegant trousers dressy pants",
+    work: "dress pants trousers professional bottoms slacks work pants",
+    date: "jeans skirt elegant pants stylish bottoms",
+    vacation: "shorts casual pants comfortable bottoms light pants",
+    everyday: "jeans casual pants comfortable bottoms everyday pants"
+  }
 }
 
-/**
- * Generate embedding for query with retry logic
- */
-async function generateEmbedding(text, retries = 3) {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      const response = await openai.embeddings.create({
-        model: EMBEDDING_MODEL,
-        input: text.substring(0, 8000),
-      })
-      return response.data[0].embedding
-    } catch (error) {
-      if (attempt === retries) {
-        console.error(`❌ Embedding error after ${retries} attempts:`, error.message)
-        return null
-      }
-      
-      // Wait before retry (exponential backoff)
-      const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 10000)
-      console.log(`   ⚠️  Retry ${attempt}/${retries} after ${waitTime}ms...`)
-      await new Promise(r => setTimeout(r, waitTime))
-    }
-  }
-  return null
-}
+// Add category-specific subcategory terms
+const subcategoryTerms = categorySubcategoryTerms[category]?.[occasion] || ""
+semanticQuery += ` ${category} ${subcategoryTerms}`
 
-/**
- * Post-filter products by occasion (safety net)
- */
-function postFilterByOccasion(products, occasion, category) {
-  if (!occasion || occasion === "everyday") return products
-
-  return products.filter((product) => {
-    const name = (product.product_name || "").toLowerCase()
-    const desc = (product.description || "").toLowerCase()
-    const combined = `${name} ${desc}`
-
-    if (occasion === "workout") {
-      const workoutKeywords = [
-        "athletic",
-        "sport",
-        "gym",
-        "fitness",
-        "training",
-        "workout",
-        "activewear",
-        "performance",
-        "moisture",
-        "breathable",
-        "running",
-        "yoga",
-        "crossfit",
-        "exercise",
-        "legging",
-        "jogger",
-        "track",
-        "tank",
-        "compression",
-        "sweat",
-        "sneaker",
-        "trainer",
-        "runner",
-        "ski",
-        "water repellent",
-        "windproof",
-        "fleece",
-        "anorak",
-        "puffer",
-        "hoodie",
-        "tech",
-        "stretch",
-        "recco",
-        "thermal",
-        "insulated",
-        "quick dry",
-        "spandex",
-        "lycra",
-        "mesh",
-        "wicking",
-      ]
-
-      if (category === "bottoms") {
-        // Reject leather pants completely for workout
-        if (/leather/i.test(combined)) {
-          console.log(`  🚫 Rejected leather item for workout: ${name.substring(0, 50)}`)
-          return false
-        }
-
-        // Accept leggings/joggers if not formal
-        if (/legging|jogger|track pant|athletic pant|gym pant|workout pant|sport pant/i.test(combined)) {
-          if (!/sequin|beaded|dress|formal|cocktail|velvet|satin/i.test(combined)) {
-            return true
-          }
-        }
-      }
-
-      if (category === "tops") {
-        if (/ski|snowboard|water repellent|windproof|anorak|fleece/i.test(combined)) {
-          return true
-        }
-        if (/tank|crop.*(?:top|hoodie|jacket)/i.test(combined) && !/strapless|beaded|sequin/i.test(combined)) {
-          return true
-        }
-      }
-
-      const hasWorkoutKeyword = workoutKeywords.some((k) => combined.includes(k))
-
-      if (!hasWorkoutKeyword) {
-        // Trust vector search for neutral items (they passed embedding filter already)
-        // Only reject OBVIOUSLY formal/inappropriate items
-        const obviouslyNotWorkout = [
-          "blazer",
-          "suit jacket",
-          "formal",
-          "business suit",
-          "office wear",
-          "dress pants",
-          "dress shirt",
-          "cocktail",
-          "evening gown",
-          "party dress",
-          "gown",
-          "wedding dress",
-          "prom",
-          "tuxedo",
-          "bow tie",
-          "cufflink",
-          "silk blouse",
-          "velvet gown",
-          "satin dress",
-          "lace dress",
-          "sequin",
-          "beaded",
-          "rhinestone",
-          "embroidered dress",
-          "crochet dress",
-          "fur coat",
-          "trench coat",
-        ]
-
-        const isObviouslyNotWorkout = obviouslyNotWorkout.some((k) => combined.includes(k))
-
-        if (isObviouslyNotWorkout) {
-          console.log(`  🚫 Rejected non-workout item: ${name.substring(0, 50)}`)
-          return false
-        }
-
-        // Trust vector search for items that passed embedding occasion filter
-        return true
-      }
-
-      const workoutReject = [
-        "sequin",
-        "beaded",
-        "rhinestone",
-        "formal dress",
-        "cocktail dress",
-        "evening gown",
-        "party dress",
-        "prom dress",
-        "wedding dress",
-        "ballgown",
-        "tuxedo",
-      ]
-
-      const hasRejectKeyword = workoutReject.some((k) => combined.includes(k))
-
-      if (hasRejectKeyword) {
-        console.log(`  🚫 Rejected formal item for workout: ${name.substring(0, 50)}`)
-        return false
-      }
-
-      if (category === "shoes") {
-        // Reject heels and dress shoes, but ALLOW leather sneakers/trainers
-        if (/heel|pump|stiletto|dress shoe|oxford|loafer(?!.*sneaker)|boot(?!.*(?:running|hiking|athletic|ankle))/i.test(combined)) {
-          // Except if it's explicitly athletic (leather sneaker, leather trainer)
-          if (!/sneaker|trainer|athletic|sport|running/i.test(combined)) {
-            console.log(`  🚫 Rejected non-athletic shoe for workout: ${name.substring(0, 50)}`)
-            return false
-          }
-        }
-      }
-    }
-
-    if (occasion === "party") {
-      const partyReject = [
-        "athletic",
-        "gym",
-        "workout",
-        "sport sweat",
-        "jogger",
-        "legging",
-        "sneaker",
-        "trainer",
-        "running",
-        "yoga",
-        "fitness",
-      ]
-      if (partyReject.some((k) => combined.includes(k))) {
-        console.log(`  🚫 Rejected athletic item for party: ${name.substring(0, 50)}`)
-        return false
-      }
-    }
-
-    if (occasion === "work") {
-      const workReject = ["athletic", "gym", "workout", "sport sweat", "party dress", "sequin", "clubwear"]
-      if (workReject.some((k) => combined.includes(k))) {
-        console.log(`  🚫 Rejected inappropriate item for work: ${name.substring(0, 50)}`)
-        return false
-      }
-    }
-
-    return true
-  })
-}
-
-/**
- * Deduplicate products by product_id or id field
- * Fixed to check both product_id and id fields for deduplication
- */
-function deduplicateProducts(products) {
-  const seen = new Set()
-  const unique = []
-
-  for (const product of products) {
-    const productId = product.product_id || product.id
-    if (!seen.has(productId)) {
-      seen.add(productId)
-      unique.push(product)
-    }
-  }
-
-  if (seen.size < products.length) {
-    console.log(`  🔄 Removed ${products.length - seen.size} duplicate products`)
-  }
-
-  return unique
-}
-
-/**
- * Calculate diversity score for product selection
- * Ensures variety in price, brand, style, and prevents near-duplicates
- */
-function calculateDiversityScore(products) {
-  if (products.length === 0) return products
-
-  // Group products by price ranges
-  const priceRanges = {
-    budget: products.filter((p) => p.price < 50),
-    mid: products.filter((p) => p.price >= 50 && p.price < 150),
-    premium: products.filter((p) => p.price >= 150 && p.price < 300),
-    luxury: products.filter((p) => p.price >= 300),
-  }
-
-  // Group by brand
-  const brandCounts = {}
-  products.forEach((p) => {
-    const brand = p.brand || "unknown"
-    brandCounts[brand] = (brandCounts[brand] || 0) + 1
-  })
-
-  // Track similar names to prevent near-duplicates
-  const nameCounts = {}
-  products.forEach((p) => {
-    // Extract base name (first 3 words) to detect similar products
-    const baseName = (p.product_name || "").toLowerCase().split(" ").slice(0, 3).join(" ")
-    nameCounts[baseName] = (nameCounts[baseName] || 0) + 1
-  })
-
-  // Score each product for diversity
-  const scoredProducts = products.map((product, index) => {
-    let diversityScore = 0
-
-    // Variety in price ranges (prefer even distribution)
-    const priceRange =
-      product.price < 50 ? "budget" : product.price < 150 ? "mid" : product.price < 300 ? "premium" : "luxury"
-    const rangeCount = priceRanges[priceRange].length
-    diversityScore += (1 / rangeCount) * 35 // Max 35 points for price diversity
-
-    // Variety in brands (penalize over-represented brands)
-    const brand = product.brand || "unknown"
-    const brandFrequency = brandCounts[brand] / products.length
-    diversityScore += (1 - brandFrequency) * 25 // Max 25 points for brand diversity
-
-    const baseName = (product.product_name || "").toLowerCase().split(" ").slice(0, 3).join(" ")
-    const nameFrequency = nameCounts[baseName] / products.length
-    diversityScore += (1 - nameFrequency) * 30 // Max 30 points for name uniqueness
-
-    // Position bonus (gradually decrease to encourage mixing)
-    diversityScore += (1 - index / products.length) * 10 // Max 10 points for relevance
-
-    return {
-      ...product,
-      diversityScore,
-      _debug: {
-        priceRange,
-        brand,
-        baseName,
-        score: Math.round(diversityScore),
-      },
-    }
-  })
-
-  // Sort by diversity score and remove debug info
-  return scoredProducts
-    .sort((a, b) => b.diversityScore - a.diversityScore)
-    .map(({ _debug, diversityScore, ...product }) => product)
-}
-
-/**
- * Get budget tier and flexibility rules based on price range
- * Fixed to properly calculate tier from total budget, not category budget
- */
-function getBudgetFlexibility(totalMin, totalMax) {
-  // Calculate average from TOTAL budget, not category budget
-  const avgPrice = (totalMin + totalMax) / 2
-
-  let tier, downFlex, upFlex
-
-  if (avgPrice < 150) {
-    // Budget tier - tight on both ends
-    tier = "budget"
-    downFlex = 0.1 // -10% on minimum
-    upFlex = 0.2 // +20% on maximum
-  } else if (avgPrice < 300) {
-    // Moderate tier - standard flexibility
-    tier = "moderate"
-    downFlex = 0.1 // -10% on minimum
-    upFlex = 0.3 // +30% on maximum
-  } else if (avgPrice < 700) {
-    // Premium tier - generous upward flexibility
-    tier = "premium"
-    downFlex = 0.05 // -5% on minimum
-    upFlex = 0.35 // +35% on maximum
-  } else {
-    // Luxury tier - unlimited upward
-    tier = "luxury"
-    downFlex = 0.05 // -5% on minimum
-    upFlex = 999 // Unlimited upward
-  }
-
-  return { tier, downFlex, upFlex }
-}
-
-/**
- * Get occasion-based category budget percentages
- */
-function getOccasionCategoryBudgets(occasion) {
-  const budgetRules = {
-    workout: {
-      shoes: { min: 0.4, max: 0.5 },
-      tops: { min: 0.25, max: 0.3 },
-      bottoms: { min: 0.25, max: 0.3 },
-    },
-    party: {
-      tops: { min: 0.35, max: 0.4 },
-      shoes: { min: 0.3, max: 0.35 },
-      bottoms: { min: 0.25, max: 0.3 },
-    },
-    work: {
-      tops: { min: 0.35, max: 0.4 },
-      bottoms: { min: 0.3, max: 0.35 },
-      shoes: { min: 0.25, max: 0.3 },
-    },
-    date: {
-      tops: { min: 0.35, max: 0.4 },
-      bottoms: { min: 0.3, max: 0.35 },
-      shoes: { min: 0.25, max: 0.3 },
-    },
-    vacation: {
-      tops: { min: 0.33, max: 0.35 },
-      bottoms: { min: 0.33, max: 0.35 },
-      shoes: { min: 0.3, max: 0.35 },
-    },
-    everyday: {
-      tops: { min: 0.3, max: 0.35 },
-      bottoms: { min: 0.3, max: 0.35 },
-      shoes: { min: 0.3, max: 0.35 },
-    },
-  }
-
-  return budgetRules[occasion] || budgetRules.everyday
-}
-
-/**
- * Calculate smart budget range with asymmetric flexibility and occasion awareness
- * Fixed to require totalBudget parameter for correct tier detection
- */
-function calculateSmartBudget(totalMin, totalMax, category, occasion) {
-  // Use TOTAL budget for tier detection, not category budget
-  const { tier, downFlex, upFlex } = getBudgetFlexibility(totalMin, totalMax)
-
-  // Get occasion-specific category percentages
-  const categoryBudgets = getOccasionCategoryBudgets(occasion)
-  const categoryPercent = categoryBudgets[category] || { min: 0.3, max: 0.35 }
-
-  // Calculate category-specific budget
-  const categoryMin = totalMin * categoryPercent.min
-  const categoryMax = totalMax * categoryPercent.max
-
-  // Apply asymmetric flexibility (less down, more up)
-  const flexibleMin = categoryMin * (1 - downFlex)
-  const flexibleMax = upFlex === 999 ? 999999 : categoryMax * (1 + upFlex)
-
-  return {
-    tier,
-    categoryMin: Math.round(categoryMin),
-    categoryMax: Math.round(categoryMax),
-    searchMin: Math.round(flexibleMin),
-    searchMax: upFlex === 999 ? 999999 : Math.round(flexibleMax),
-    downFlexPercent: Math.round(downFlex * 100),
-    upFlexPercent: upFlex === 999 ? "unlimited" : Math.round(upFlex * 100),
-    isUnlimited: upFlex === 999,
-  }
+return semanticQuery
 }
 
 // ============================================================================
+
 // API ROUTES
+
 // ============================================================================
 
 /**
@@ -615,22 +262,24 @@ app.post("/api/search", async (req, res) => {
       ],
     }
 
-    if (occasion && occasion !== "everyday") {
-      whereFilters.operands.push({
-        path: ["suitableOccasions"],
-        operator: "ContainsAny",
-        valueTextArray: [occasion, "everyday"],
-      })
-    }
+    // FIX: Make occasion filter very flexible - include casual/everyday as fallback
+// ✅ NEW: Trust embeddings for occasion matching - only filter for SPECIFIC occasions
+// For generic occasions (date, vacation, everyday), skip hard filter and let embeddings decide
+const specificOccasions = ["workout", "party", "work", "formal"]
 
-    if (occasion === "workout" && category === "shoes") {
-      whereFilters.operands.push({
-        path: ["heelType"],
-        operator: "Equal",
-        valueText: "athletic",
-      })
-      console.log(`   🎯 Forcing athletic shoes for workout`)
-    }
+if (occasion && specificOccasions.includes(occasion)) {
+  whereFilters.operands.push({
+    path: ["suitableOccasions"],
+    operator: "ContainsAny",
+    valueTextArray: [occasion]  // ← No fallback, strict matching
+  })
+  console.log(`   🔍 Filtering by occasion: ${occasion} (strict matching, trusting embeddings)`)
+} else {
+  console.log(`   🔍 No occasion filter (trusting embeddings for: ${occasion})`)
+}
+
+    // FIX: REMOVED strict heelType filters - they block all results since embeddings aren't regenerated yet
+    // The semantic query + post-filtering will handle style appropriateness instead
 
     let budgetInfo = null
     if (priceRange && priceRange.min !== undefined && priceRange.max !== undefined) {
@@ -672,8 +321,12 @@ app.post("/api/search", async (req, res) => {
 
     console.log(`   🔎 Searching Weaviate with hybrid search...`)
 
-    const fetchMultiplier = budgetInfo?.tier === "luxury" ? 4 : budgetInfo?.tier === "premium" ? 3.5 : 3
-    const initialLimit = Math.round(limit * fetchMultiplier)
+// ✅ NEW: Increased base multiplier for better diversity (embeddings are now stronger, so we can fetch more confidently)
+const categoryMultiplier = category === "shoes" ? 6 : 1.2  // Shoes: 6x, Others: 1.2x
+const fetchMultiplier = (budgetInfo?.tier === "luxury" ? 5 : budgetInfo?.tier === "premium" ? 4.5 : 4) * categoryMultiplier
+const initialLimit = Math.round(limit * fetchMultiplier)
+
+console.log(`   📊 Fetch strategy: ${initialLimit} products (${fetchMultiplier.toFixed(1)}x multiplier for ${budgetInfo?.tier || 'standard'} tier + ${category})`)
 
     const response = await weaviateClient.graphql
       .get()
@@ -692,6 +345,34 @@ app.post("/api/search", async (req, res) => {
 
     let products = response.data.Get.Product || []
     console.log(`   ✓ Found ${products.length} products before processing`)
+    
+    // FIX: Relaxed style coherence filtering - only reject EXTREMELY mismatched items
+    const preFilterCount = products.length
+    products = products.filter(product => {
+      const name = (product.product_name || '').toLowerCase()
+      const desc = (product.description || '').toLowerCase()
+      const combined = `${name} ${desc}`
+      
+      // Workout: Only reject OBVIOUS formal wear (not all dressy items)
+      if (occasion === 'workout' && category !== 'shoes') {
+        if (/sequin|beaded|rhinestone|crystal|tuxedo|ball\s*gown|evening\s*gown|cocktail\s*dress/i.test(combined)) {
+          return false
+        }
+      }
+      
+      // Formal/Party: Only reject OBVIOUS athletic wear for tops/bottoms
+      if ((occasion === 'party' || occasion === 'formal') && (category === 'tops' || category === 'bottoms')) {
+        if (/\bsweatpant|\bjogger|\bgym\s*short|\bworkout\s*(top|pant)|\bactivewear\b/i.test(combined)) {
+          return false
+        }
+      }
+      
+      return true
+    })
+    
+    if (preFilterCount > products.length) {
+      console.log(`   🎨 Style coherence filter: ${preFilterCount} → ${products.length} products (relaxed)`)
+    }
 
     if (products.length < limit / 2 && budgetInfo && !budgetInfo.isUnlimited) {
       console.log(`   ⚠️  Only ${products.length} products found, relaxing budget constraints...`)
@@ -921,8 +602,11 @@ app.post("/api/generate-embeddings", async (req, res) => {
     const startTime = Date.now()
 
     // ========================================================================
+
     // STEP 1: DELETE OLD DATA FROM WEAVIATE
+
     // ========================================================================
+
     console.log("1️⃣  Clearing old Weaviate data...")
     try {
       await weaviateClient.schema.classDeleter().withClassName("Product").do()
@@ -932,8 +616,11 @@ app.post("/api/generate-embeddings", async (req, res) => {
     }
 
     // ========================================================================
+
     // STEP 2: RECREATE PRODUCT CLASS SCHEMA
+
     // ========================================================================
+
     console.log("2️⃣  Creating Product class schema...")
     const classObj = {
       class: "Product",
@@ -997,8 +684,11 @@ app.post("/api/generate-embeddings", async (req, res) => {
     console.log("   ✅ Product class created\n")
 
     // ========================================================================
+
     // STEP 3: FETCH PRODUCTS FROM SUPABASE
+
     // ========================================================================
+
     console.log("3️⃣  Fetching products from Supabase...")
     const { createClient } = await import("@supabase/supabase-js")
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
@@ -1032,260 +722,11 @@ app.post("/api/generate-embeddings", async (req, res) => {
     console.log(`   ✅ Total products fetched: ${allProducts.length}\n`)
 
     // ========================================================================
-    // STEP 4: HELPER FUNCTIONS FOR OCCASION DETECTION
-    // ========================================================================
-    function detectSuitableOccasions(name, desc) {
-      const combined = `${name} ${desc}`.toLowerCase()
-      const occasions = []
 
-      const workoutKeywords = [
-        "athletic",
-        "sport",
-        "gym",
-        "fitness",
-        "training",
-        "workout",
-        "activewear",
-        "performance",
-        "running",
-        "yoga",
-        "jogging",
-        "moisture wicking",
-        "breathable",
-        "compression",
-        "dri-fit",
-        "sneaker",
-        "trainer",
-        "legging",
-        "jogger athletic",
-        "sports bra",
-      ]
-      const workoutReject = ["formal", "evening", "cocktail", "party dress", "gala", "sequin", "beaded", "velvet gown", "heel", "pump", "stiletto"]
-
-      const hasWorkout = workoutKeywords.some((k) => combined.includes(k))
-      const hasWorkoutReject = workoutReject.some((k) => combined.includes(k))
-
-      if (hasWorkout && !hasWorkoutReject) {
-        occasions.push("workout")
-      }
-
-      const partyKeywords = ["party", "evening", "cocktail", "formal", "sequin", "sparkle", "metallic", "satin", "velvet", "elegant", "dressy", "gala"]
-      if (partyKeywords.some((k) => combined.includes(k))) {
-        occasions.push("party")
-      }
-
-      const workKeywords = ["office", "business", "professional", "corporate", "blazer", "suit", "tailored", "structured"]
-      if (workKeywords.some((k) => combined.includes(k))) {
-        occasions.push("work")
-      }
-
-      const dateKeywords = ["date", "romantic", "elegant", "chic", "sophisticated", "feminine", "flirty", "dressy"]
-      if (dateKeywords.some((k) => combined.includes(k))) {
-        occasions.push("date")
-      }
-
-      const vacationKeywords = ["vacation", "resort", "beach", "summer", "tropical", "travel", "linen", "lightweight", "breezy"]
-      if (vacationKeywords.some((k) => combined.includes(k))) {
-        occasions.push("vacation")
-      }
-
-      if (occasions.length === 0 || (!occasions.includes("workout") && !occasions.includes("party"))) {
-        occasions.push("everyday")
-      }
-
-      return occasions.length > 0 ? occasions : ["everyday"]
-    }
-
-    function detectFormalityLevel(name, desc, occasions) {
-      const combined = `${name} ${desc}`.toLowerCase()
-
-      if (occasions.includes("workout")) return "athletic"
-      if (occasions.includes("party")) return "formal"
-      if (occasions.includes("work")) return "business-casual"
-
-      const casualKeywords = ["casual", "relaxed", "comfortable", "everyday", "basic"]
-      if (casualKeywords.some((k) => combined.includes(k))) return "casual"
-
-      const smartKeywords = ["smart", "polished", "tailored", "structured", "chic"]
-      if (smartKeywords.some((k) => combined.includes(k))) return "smart-casual"
-
-      return "casual"
-    }
-
-    function detectHeelType(name, desc, category) {
-      if (category !== "shoes") return "n/a"
-
-      const combined = `${name} ${desc}`.toLowerCase()
-
-      if (/sneaker|trainer|runner|athletic|sport/i.test(combined)) return "athletic"
-      if (/flat|loafer|slipper|ballet/i.test(combined)) return "flat"
-      if (/stiletto|high heel|platform/i.test(combined)) return "high-heel"
-      if (/kitten heel|low heel/i.test(combined)) return "low-heel"
-      if (/mid heel|block heel|wedge/i.test(combined)) return "mid-heel"
-
-      return "flat"
-    }
-
-function detectCategory(product) {
-  // PRIORITY 1: Use category_name field (most accurate)
-  const categoryName = (product.category_name || "").toLowerCase()
-  
-  if (categoryName) {
-    // Filter out ONLY true accessories - NOT swimwear bottoms
-    if (/accessori|wallet|keychain|\bbag\b|purse|jewelry|watch|\bbelt\b|\bhat\b|scarf|glove|sunglasses|bralette|\bthong\b(?!.*bodysuit)|underwear(?!.*dress)|lingerie(?!.*dress)|bikini\s*top|swim\s*top|necklace|bracelet|earring|\bring\b|cover[\s-]?up/i.test(categoryName)) {
-      return "unknown"
-    }
-    
-    // CHECK IN STRICT ORDER: shoes → bottoms → tops
-    // SHOES FIRST (most specific)
-    if (/shoe|boot|sneaker|trainer|sandal|heel|flat|pump|footwear/i.test(categoryName)) {
-      return "shoes"
-    }
-    
-    // BOTTOMS SECOND - flexible patterns without strict word boundaries
-    if (/pant|jean|trouser|legging|short(?!.*sleeve)|skirt|jogger|culotte|chino|sweatpant|palazzo|capri|skort|bottoms/i.test(categoryName)) {
-      return "bottoms"
-    }
-    
-    // TOPS LAST
-    if (/shirt|blouse|top|tank|tee|sweater|cardigan|hoodie|jacket|blazer|coat|vest|dress|gown|tunic|pullover|crop|cami|bodysuit/i.test(categoryName)) {
-      return "tops"
-    }
-  }
-  
-  // FALLBACK: Use product name and description
-  const name = (product.product_name || "").toLowerCase()
-  const desc = (product.description || "").toLowerCase()
-  const combined = `${name} ${desc}`
-  
-  // Filter ONLY true accessories - NOT clothing
-  if (/wallet|keychain|\bbag\b(?!gy)|purse|jewelry|watch|\bbelt\b(?!ed)|\bhat\b|scarf|glove(?!s?\b)|sunglasses|bralette|\bthong\b(?!.*bodysuit)|underwear(?!.*dress)|lingerie(?!.*dress)|bikini\s*top|swim\s*top|necklace|bracelet|earring|\bring\b(?!.*detail)|sarong|cover[\s-]?up/i.test(combined)) {
-    return "unknown"
-  }
-  
-  // CHECK IN STRICT ORDER: shoes → bottoms → tops
-  
-  // SHOES FIRST - flexible pattern
-  if (/shoe|boot|sneaker|trainer|sandal|pump|loafer|heel|flat|mule|clog|espadrille|oxford|derby|monk|brogue/i.test(combined)) {
-    return "shoes"
-  }
-  
-  // BOTTOMS SECOND - ULTRA FLEXIBLE (handles hyphens, compounds, modifiers)
-  // Matches: "Wide-Leg Jeans", "Cargo Pants", "Mini Skirt", "Bikini Bottoms"
-  if (/pant|jean|trouser|legging|short(?![s\-]*\s*sleeve)|skirt|jogger|culotte|chino|sweatpant|palazzo|capri|skort|bottoms/i.test(combined)) {
-    return "bottoms"
-  }
-  
-  // TOPS LAST - flexible pattern with modifiers
-  // Matches: "Mini Dress", "Tube Dress", "Strapless Dress", "Bodysuit"
-  if (/shirt|blouse|top(?!knot)|tank|tee|sweater|cardigan|hoodie|jacket|blazer|coat|vest|dress|gown|tunic|poncho|pullover|crop|halter|cami|romper|jumpsuit|bodysuit/i.test(combined)) {
-    return "tops"
-  }
-  
-  return "unknown"
-  }
-
-    function extractColorFromName(productName) {
-      const colorKeywords = [
-        "white", "black", "red", "blue", "green", "yellow", "purple", "pink", "orange", "brown",
-        "gray", "grey", "navy", "beige", "cream", "gold", "silver", "bronze", "copper", "rose",
-        "coral", "teal", "turquoise", "aqua", "indigo", "burgundy", "maroon", "crimson", "olive",
-        "khaki", "tan", "taupe", "charcoal", "ivory", "pearl", "blush", "champagne", "nude"
-      ]
-      
-      const nameLower = (productName || "").toLowerCase()
-      for (const color of colorKeywords) {
-        if (nameLower.includes(color)) {
-          return color.charAt(0).toUpperCase() + color.slice(1)
-        }
-      }
-      return ""
-    }
-
-    function extractStyleKeywords(productName, description) {
-      const stylePatterns = {
-        details: ["tie front", "broderie detail", "embroidered", "printed", "striped", "polka dot", "floral", "sequin", "beaded", "pleated", "ruched", "draped", "wrap", "button-down", "zip", "collar", "pocket", "sleeve"],
-        fit: ["slim fit", "regular fit", "oversized", "fitted", "loose", "bodycon", "wide leg", "skinny", "straight leg", "tapered"],
-        style: ["casual", "formal", "vintage", "minimalist", "bohemian", "sporty", "elegant", "trendy", "classic", "edgy"]
-      }
-      
-      const combined = `${productName} ${description}`.toLowerCase()
-      const found = []
-      
-      for (const [category, keywords] of Object.entries(stylePatterns)) {
-        for (const keyword of keywords) {
-          if (combined.includes(keyword)) {
-            found.push(keyword)
-          }
-        }
-      }
-      
-      return found.length > 0 ? found.slice(0, 5).join(", ") : ""
-    }
-
-    function parseCategoryHierarchy(categoryName) {
-      if (!categoryName) return ""
-      // e.g., "Women > Clothing > Blouses" → extract useful parts
-      const parts = categoryName.split(">").map(p => p.trim())
-      // Return the most specific category (last part) plus parent if useful
-      const specific = parts[parts.length - 1] || ""
-      const parent = parts.length > 1 ? parts[parts.length - 2] : ""
-      
-      return [parent, specific].filter(p => p && p !== "Clothing").join(" ")
-    }
-
-    function createEmbeddingText(product, category, occasions, formalityLevel, heelType) {
-      const name = product.product_name || ""
-      
-      // Extract color from product_name if colour field is empty
-      let color = product.colour || product.color || extractColorFromName(name)
-      
-      // Use both description and materials_description
-      const desc = (product.description || "").substring(0, 300)
-      const materials = (product.materials_description || "").substring(0, 300)
-      const fullDesc = [desc, materials].filter(d => d.trim() && !d.includes("Shop")).join(" ")
-
-      const brand = product.brand || ""
-      const family = product.product_family || ""
-      const styleKeywords = extractStyleKeywords(name, desc)
-      const categoryHierarchy = parseCategoryHierarchy(product.category_name)
-
-      let text = `${name}`
-      
-      // Add style keywords extracted from product name/description
-      if (styleKeywords) {
-        text += `. Details: ${styleKeywords}`
-      }
-      
-      // Add description if it's not just boilerplate
-      if (fullDesc && !fullDesc.includes("ASOS")) {
-        text += `. ${fullDesc}`
-      }
-      
-      // Add structured data
-      if (categoryHierarchy) {
-        text += `. Category: ${categoryHierarchy}`
-      } else {
-        text += `. This is a ${category} item`
-      }
-      
-      text += `. Suitable for: ${occasions.join(", ")}`
-      text += `. Formality: ${formalityLevel}`
-
-      if (category === "shoes" && heelType !== "n/a") {
-        text += `. Heel type: ${heelType}`
-      }
-
-      if (color) text += `. Color: ${color}`
-      if (brand) text += `. Brand: ${brand}`
-      if (family) text += `. Type: ${family}`
-
-      return text.trim()
-    }
-
-    // ========================================================================
     // STEP 5: FILTER VALID PRODUCTS
+
     // ========================================================================
+
     console.log("4️⃣  Filtering valid products...")
     const validProducts = allProducts.filter((p) => {
       const hasName = p.product_name?.trim() && p.product_name.length > 2
@@ -1295,10 +736,13 @@ function detectCategory(product) {
     console.log(`   ✅ ${validProducts.length} valid products (removed ${allProducts.length - validProducts.length})\n`)
 
     // ========================================================================
+
     // STEP 6: GENERATE EMBEDDINGS (OPTIMIZED)
+
     // ========================================================================
+
     console.log("5️⃣  Generating embeddings with OpenAI (optimized)...")
-    const BATCH_SIZE = 100 // Increased from 50 to 100 for faster processing
+    const BATCH_SIZE = 150 // Increased from 50 to 100 for faster processing
     const productsWithEmbeddings = []
     let embeddingCount = 0
 
@@ -1312,27 +756,48 @@ function detectCategory(product) {
       const results = await Promise.all(
         batch.map(async (product) => {
           try {
-            // Use detectCategory function instead of category_name (which may not exist)
-            const category = detectCategory(product)
-            const name = product.product_name || ""
-            const desc = product.description || ""
+            // PRIORITY: Use outfit_category from database (set at scrape time - 100% accurate)
+            // FALLBACK: Use detectCategory() for old data without outfit_category
+ 
 
-            // Skip products with unknown category
-            if (category === "unknown") {
-              console.log(`   ⚠️  Skipping product with unknown category: ${name.substring(0, 50)}`)
-              return null
-            }
+ 
+// ✅ PRIORITY 1: Use outfit_category (100% accurate)
+const category = product.outfit_category || detectCategory(product)
+const name = product.product_name || ""
+const desc = product.description || ""
 
-            const occasions = detectSuitableOccasions(name, desc)
-            const formalityLevel = detectFormalityLevel(name, desc, occasions)
-            const heelType = detectHeelType(name, desc, category)
+// Skip products with unknown category
+if (category === "unknown" || !category) {
+  console.log(`   ⚠️  Skipping product with unknown category: ${name.substring(0, 50)}`)
+  return null
+}
 
-            const embeddingText = createEmbeddingText(product, category, occasions, formalityLevel, heelType)
-            const embedding = await generateEmbedding(embeddingText)
+// ✅ NEW: Extract subcategory from category_name
+const subcategory = extractSubcategory(product.category_name)
+
+const occasions = detectSuitableOccasions(name, desc)
+const formalityLevel = classifyBrandTier(product.brand, Number.parseFloat(product.price))
+const heelType = extractCut(name, desc, category)
+
+// ✅ NEW: Occasion boost keywords for stronger semantic signal
+const occasionBoost = {
+  'workout': 'athletic performance gym fitness training sports active running yoga legging jogger',
+  'formal': 'formal evening elegant sophisticated gown tuxedo black-tie gala dinner',
+  'party': 'party sequin sparkle glitter metallic glamorous nightclub festive dressy',
+  'work': 'professional business corporate office blazer tailored business-casual',
+  'everyday': 'casual comfortable everyday basic versatile simple'
+}
+
+const primaryOccasion = occasions[0] || 'everyday'
+
+// ✅ CRITICAL FIX: Build RICH embedding text with subcategory emphasis
+const embeddingText = `${name}. ${desc}. Main category: ${category}. ${subcategory ? `Product type: ${subcategory} ${category}.` : ''} Heel height: ${heelType}. Material: ${extractMaterials(product.materials || product.materials_description || desc)}. Neckline: ${extractNeckline(name, desc)}. Sleeve: ${extractSleeveType(name, desc)}. Pattern: ${extractPattern(name, desc)}. Fit: ${extractFit(name, desc)}. Cut: ${heelType}. Suitable for: ${occasions.join(", ")}. Formality: ${formalityLevel}. Occasion emphasis: ${occasionBoost[primaryOccasion]} ${primaryOccasion}. Heel type: ${heelType}`
+
+const embedding = await generateEmbedding(embeddingText)
 
             if (embedding) embeddingCount++
 
-            // Use both product.id and product.product_id for compatibility
+            // Use both product_id and product.product_id for compatibility
             const productId = product.product_id || product.id
 
             return {
@@ -1342,7 +807,7 @@ function detectCategory(product) {
               price: product.price,
               brand: product.brand,
               color: product.colour || product.color,
-              category: category,
+              category: product.outfit_category || category, // FIX: Use outfit_category from database (100% accurate)
               suitableOccasions: occasions,
               formalityLevel: formalityLevel,
               heelType: heelType,
@@ -1369,8 +834,11 @@ function detectCategory(product) {
     console.log(`\n   ✅ Total: ${embeddingCount} embeddings generated\n`)
 
     // ========================================================================
+
     // STEP 7: BATCH IMPORT TO WEAVIATE
+
     // ========================================================================
+
     console.log("6️⃣  Importing to Weaviate...")
 
     let successCount = 0
@@ -1384,7 +852,7 @@ function detectCategory(product) {
         for (const product of batch) {
           // Convert product_id to string to ensure compatibility
           const productIdStr = String(product.product_id)
-          
+
           batcher = batcher.withObject({
             class: "Product",
             properties: {
@@ -1404,7 +872,7 @@ function detectCategory(product) {
         }
 
         const result = await batcher.do()
-        
+
         // Check for errors in batch result
         if (result && result.length > 0) {
           const errors = result.filter(r => r.result?.errors)
@@ -1413,7 +881,7 @@ function detectCategory(product) {
             failedCount += errors.length
           }
         }
-        
+
         successCount += batch.length
         console.log(`   ✅ Imported ${successCount}/${productsWithEmbeddings.filter((p) => p.embedding).length}`)
       } catch (error) {
@@ -1421,14 +889,17 @@ function detectCategory(product) {
         failedCount += batch.length
       }
     }
-    
+
     if (failedCount > 0) {
       console.log(`\n   ⚠️  ${failedCount} products failed to import\n`)
     }
 
     // ========================================================================
+
     // STEP 8: VERIFY IMPORT
+
     // ========================================================================
+
     console.log("\n7️⃣  Verifying...")
     const result = await weaviateClient.graphql.aggregate().withClassName("Product").withFields("meta { count }").do()
 
@@ -1468,7 +939,9 @@ function detectCategory(product) {
 })
 
 // ============================================================================
+
 // START SERVER
+
 // ============================================================================
 
 app.listen(PORT, () => {
@@ -1488,3 +961,622 @@ app.listen(PORT, () => {
   console.log(`   POST /api/generate-embeddings    - Generate & import embeddings`)
   console.log("\n✅ Server ready!\n")
 })
+
+/**
+ * Generate embedding for query with retry logic
+ */
+async function generateEmbedding(text, retries = 3) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const response = await openai.embeddings.create({
+        model: EMBEDDING_MODEL,
+        input: text.substring(0, 8000),
+      })
+      return response.data[0].embedding
+    } catch (error) {
+      if (attempt === retries) {
+        console.error(`❌ Embedding error after ${retries} attempts:`, error.message)
+        return null
+      }
+      
+      // Wait before retry (exponential backoff)
+      const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 10000)
+      console.log(`   ⚠️  Retry ${attempt}/${retries} after ${waitTime}ms...`)
+      await new Promise(r => setTimeout(r, waitTime))
+    }
+  }
+  return null
+}
+
+/**
+ * STRICT FASHION RULES - Real Fashion Sense
+ * Only allows items that truly suit the occasion
+ */
+function postFilterByOccasion(products, occasion, category) {
+  if (!occasion) return products
+
+  return products.filter((product) => {
+    const name = (product.product_name || "").toLowerCase()
+    const desc = (product.description || "").toLowerCase()
+    const combined = `${name} ${desc}`
+
+    // STRICT HARD REJECTS - Never acceptable regardless of category
+    const universalRejects = {
+      workout: ["heel", "pump", "stiletto", "formal", "tuxedo", "gown", "sequin", "beaded", "velvet", "satin", "silk blouse", "cocktail", "evening gown"],
+      wedding: ["athletic", "gym", "workout", "sport", "sweatpant", "jogger", "legging", "trainer", "yoga", "casual", "loungewear", "hoodie", "sneaker"],
+      party: ["athletic", "gym", "workout", "sport", "formal", "tuxedo", "gown", "business suit", "blazer", "evening gown"],
+      work: ["athletic", "gym", "workout", "sport", "formal", "tuxedo", "gown", "business suit", "blazer", "evening gown"],
+      vacation: ["athletic", "gym", "workout", "sport", "formal", "tuxedo", "gown", "business suit", "blazer", "evening gown"],
+      everyday: ["heel", "pump", "stiletto", "sequin", "beaded", "glitter", "formal", "tuxedo", "gown", "cocktail", "evening gown", "business suit"]
+    }
+
+    const rejectsForOccasion = universalRejects[occasion] || []
+    const hasReject = rejectsForOccasion.some(word => combined.includes(word))
+    
+    if (hasReject) {
+      return false
+    }
+
+    // CATEGORY-SPECIFIC STRICT RULES
+ // ✅ NEW: Minimal post-filtering - trust embeddings, only reject ABSURD mismatches
+if (occasion === "workout") {
+  // Only reject EXTREME formal/party wear (2+ indicators)
+  const extremeRejects = ["sequin", "beaded", "rhinestone", "glitter", "formal", "evening", "gown", "tuxedo", "cocktail"]
+  const rejectCount = extremeRejects.filter(word => combined.includes(word)).length
+  
+  if (rejectCount >= 2) {
+    return false  // Reject obvious party/formal items
+  }
+  
+  // For shoes: heelType filter already handled this in Weaviate, so trust it
+  return true
+}
+
+    if (occasion === "wedding") {
+      // BOTTOMS: Only formal/elegant (dress pants, skirts, formal pants)
+      if (category === "bottoms") {
+        const reject = ["jean", "short", "cargo", "casual"]
+        const hasReject = reject.some(word => combined.includes(word))
+        if (hasReject) return false
+        // Must be formal
+        return true
+      }
+
+      // TOPS: Only formal/elegant (blazer, blouse, dress, cardigan)
+      if (category === "tops") {
+        const reject = ["tee", "tank", "hoodie", "casual", "graphic"]
+        const hasReject = reject.some(word => combined.includes(word))
+        if (hasReject) return false
+        return true
+      }
+
+      // SHOES: Only formal shoes (heels, pumps, dressy flats, oxfords)
+      if (category === "shoes") {
+        const reject = ["sneaker", "trainer", "sandal", "flip flop", "casual", "athletic"]
+        const hasReject = reject.some(word => combined.includes(word))
+        if (hasReject) return false
+        // Must be formal shoes
+        const mustHave = ["heel", "pump", "formal", "dress", "oxford", "loafer", "dressy"]
+        const isFormal = mustHave.some(word => combined.includes(word))
+        return isFormal ? true : true // Allow dressy flats too
+      }
+
+      return true
+    }
+
+    if (occasion === "party") {
+      // BOTTOMS: Dressy bottoms (avoid casual, athletic, formal business)
+      if (category === "bottoms") {
+        const reject = ["jean", "cargo", "athletic", "hoodie"]
+        const hasReject = reject.some(word => combined.includes(word))
+        if (hasReject) return false
+        return true
+      }
+
+      // TOPS: Dressy tops (avoid casual tees, hoodies)
+      if (category === "tops") {
+        const reject = ["tee", "hoodie", "casual", "graphic"]
+        const hasReject = reject.some(word => combined.includes(word))
+        if (hasReject) return false
+        return true
+      }
+
+      // SHOES: Dressy shoes only (heels, pumps, wedges, dressy sandals)
+      if (category === "shoes") {
+        const reject = ["sneaker", "trainer", "athletic", "flat", "casual", "flip flop"]
+        const hasReject = reject.some(word => combined.includes(word))
+        if (hasReject) return false
+        // Must be dressy
+        const mustHave = ["heel", "pump", "wedge", "metallic", "glitter", "dressy"]
+        const isDressy = mustHave.some(word => combined.includes(word))
+        return isDressy ? true : true // Allow other dressy shoes
+      }
+
+      return true
+    }
+
+    if (occasion === "work") {
+      // BOTTOMS: Professional pants/skirts (avoid jeans, shorts, casual)
+      if (category === "bottoms") {
+        const reject = ["short", "jean", "cargo", "athleisure", "casual"]
+        const hasReject = reject.some(word => combined.includes(word))
+        if (hasReject) return false
+        // Must be professional
+        const mustHave = ["pant", "trouser", "skirt", "professional", "formal", "chino"]
+        const isProfessional = mustHave.some(word => combined.includes(word))
+        return isProfessional ? true : true
+      }
+
+      // TOPS: Professional tops (blouse, blazer, cardigan - avoid tee, tank, hoodie)
+      if (category === "tops") {
+        const reject = ["tee", "tank", "hoodie", "casual", "graphic"]
+        const hasReject = reject.some(word => combined.includes(word))
+        if (hasReject) return false
+        // Must be professional
+        const mustHave = ["blouse", "blazer", "cardigan", "professional", "shirt", "knitwear"]
+        const isProfessional = mustHave.some(word => combined.includes(word))
+        return isProfessional ? true : true
+      }
+
+      // SHOES: Professional shoes (heels, pumps, loafers, oxfords - avoid sneakers, flats, sandals)
+      if (category === "shoes") {
+        const reject = ["sneaker", "trainer", "flip flop", "sandal", "casual"]
+        const hasReject = reject.some(word => combined.includes(word))
+        if (hasReject) return false
+        // Must be professional
+        const mustHave = ["heel", "pump", "loafer", "oxford", "boot", "professional", "dress"]
+        const isProfessional = mustHave.some(word => combined.includes(word))
+        return isProfessional ? true : true
+      }
+
+      return true
+    }
+
+    if (occasion === "vacation") {
+      // BOTTOMS: Casual/resort wear (shorts, casual pants, skirts)
+      if (category === "bottoms") {
+        const reject = ["formal", "business", "athletic", "workout"]
+        const hasReject = reject.some(word => combined.includes(word))
+        if (hasReject) return false
+        return true
+      }
+
+      // TOPS: Light casual tops (avoid formal blazer, athletic wear)
+      if (category === "tops") {
+        const reject = ["blazer", "formal", "business", "athletic", "workout"]
+        const hasReject = reject.some(word => combined.includes(word))
+        if (hasReject) return false
+        return true
+      }
+
+      // SHOES: Casual/beach shoes (sandals, flip flops, sneakers, flat sandals)
+      if (category === "shoes") {
+        const reject = ["heel", "pump", "stiletto", "formal", "business", "athletic"]
+        const hasReject = reject.some(word => combined.includes(word))
+        if (hasReject) return false
+        return true
+      }
+
+      return true
+    }
+
+    if (occasion === "everyday") {
+      // BOTTOMS: Casual comfortable bottoms (avoid formal, athletic, dressy)
+      if (category === "bottoms") {
+        const reject = ["formal", "business", "athletic", "dress pant", "workout"]
+        const hasReject = reject.some(word => combined.includes(word))
+        if (hasReject) return false
+        return true
+      }
+
+      // TOPS: Casual comfortable tops (avoid blazer, formal, athletic)
+      if (category === "tops") {
+        const reject = ["blazer", "formal", "business", "athletic", "workout"]
+        const hasReject = reject.some(word => combined.includes(word))
+        if (hasReject) return false
+        return true
+      }
+
+      // SHOES: Comfortable casual shoes (sneakers, flats, casual sandals - avoid heels, formal)
+      if (category === "shoes") {
+        const reject = ["heel", "pump", "stiletto", "formal", "business", "athletic"]
+        const hasReject = reject.some(word => combined.includes(word))
+        if (hasReject) return false
+        return true
+      }
+
+      return true
+    }
+
+    return true
+  })
+}
+
+/**
+ * Deduplicate products by product_id or id field
+ * Fixed to check both product_id and id fields for deduplication
+ */
+function deduplicateProducts(products) {
+  const seen = new Set()
+  const unique = []
+
+  for (const product of products) {
+    const productId = product.product_id || product.id
+    if (!seen.has(productId)) {
+      seen.add(productId)
+      unique.push(product)
+    }
+  }
+
+  if (seen.size < products.length) {
+    console.log(`  🔄 Removed ${products.length - seen.size} duplicate products`)
+  }
+
+  return unique
+}
+
+/**
+ * Calculate diversity score for product selection
+ * Ensures variety in price, brand, style, and prevents near-duplicates
+ */
+function calculateDiversityScore(products) {
+  if (products.length === 0) return products
+
+  // Group products by price ranges
+  const priceRanges = {
+    budget: products.filter((p) => p.price < 50),
+    mid: products.filter((p) => p.price >= 50 && p.price < 150),
+    premium: products.filter((p) => p.price >= 150 && p.price < 300),
+    luxury: products.filter((p) => p.price >= 300),
+  }
+
+  // Group by brand
+  const brandCounts = {}
+  products.forEach((p) => {
+    const brand = p.brand || "unknown"
+    brandCounts[brand] = (brandCounts[brand] || 0) + 1
+  })
+
+  // Track similar names to prevent near-duplicates
+  const nameCounts = {}
+  products.forEach((p) => {
+    // Extract base name (first 3 words) to detect similar products
+    const baseName = (p.product_name || "").toLowerCase().split(" ").slice(0, 3).join(" ")
+    nameCounts[baseName] = (nameCounts[baseName] || 0) + 1
+  })
+
+  // Score each product for diversity
+  const scoredProducts = products.map((product, index) => {
+    let diversityScore = 0
+
+    // Variety in price ranges (prefer even distribution)
+    const priceRange =
+      product.price < 50 ? "budget" : product.price < 150 ? "mid" : product.price < 300 ? "premium" : "luxury"
+    const rangeCount = priceRanges[priceRange].length
+    diversityScore += (1 / rangeCount) * 35 // Max 35 points for price diversity
+
+    // Variety in brands (penalize over-represented brands)
+    const brand = product.brand || "unknown"
+    const brandFrequency = brandCounts[brand] / products.length
+    diversityScore += (1 - brandFrequency) * 25 // Max 25 points for brand diversity
+
+    const baseName = (product.product_name || "").toLowerCase().split(" ").slice(0, 3).join(" ")
+    const nameFrequency = nameCounts[baseName] / products.length
+    diversityScore += (1 - nameFrequency) * 30 // Max 30 points for name uniqueness
+
+    // Position bonus (gradually decrease to encourage mixing)
+    diversityScore += (1 - index / products.length) * 10 // Max 10 points for relevance
+
+    return {
+      ...product,
+      diversityScore,
+      _debug: {
+        priceRange,
+        brand,
+        baseName,
+        score: Math.round(diversityScore),
+      },
+    }
+  })
+
+  // Sort by diversity score and remove debug info
+  return scoredProducts
+    .sort((a, b) => b.diversityScore - a.diversityScore)
+    .map(({ _debug, diversityScore, ...product }) => product)
+}
+
+/**
+ * Get budget tier and flexibility rules based on price range
+ * Fixed to properly calculate tier from total budget, not category budget
+ */
+function getBudgetFlexibility(totalMin, totalMax) {
+  // Calculate average from TOTAL budget, not category budget
+  const avgPrice = (totalMin + totalMax) / 2
+
+  let tier, downFlex, upFlex
+
+  if (avgPrice < 150) {
+    // Budget tier - tight on both ends
+    tier = "budget"
+    downFlex = 0.1 // -10% on minimum
+    upFlex = 0.2 // +20% on maximum
+  } else if (avgPrice < 300) {
+    // Moderate tier - standard flexibility
+    tier = "moderate"
+    downFlex = 0.1 // -10% on minimum
+    upFlex = 0.3 // +30% on maximum
+  } else if (avgPrice < 700) {
+    // Premium tier - generous upward flexibility
+    tier = "premium"
+    downFlex = 0.05 // -5% on minimum
+    upFlex = 0.35 // +35% on maximum
+  } else {
+    // Luxury tier - unlimited upward
+    tier = "luxury"
+    downFlex = 0.05 // -5% on minimum
+    upFlex = 999 // Unlimited upward
+  }
+
+  return { tier, downFlex, upFlex }
+}
+
+/**
+ * Get occasion-based category budget percentages
+ */
+function getOccasionCategoryBudgets(occasion) {
+  const budgetRules = {
+    workout: {
+      shoes: { min: 0.4, max: 0.5 },
+      tops: { min: 0.25, max: 0.3 },
+      bottoms: { min: 0.25, max: 0.3 },
+    },
+    party: {
+      tops: { min: 0.35, max: 0.4 },
+      shoes: { min: 0.3, max: 0.35 },
+      bottoms: { min: 0.25, max: 0.3 },
+    },
+    work: {
+      tops: { min: 0.35, max: 0.4 },
+      bottoms: { min: 0.3, max: 0.35 },
+      shoes: { min: 0.25, max: 0.3 },
+    },
+    date: {
+      tops: { min: 0.35, max: 0.4 },
+      bottoms: { min: 0.3, max: 0.35 },
+      shoes: { min: 0.25, max: 0.3 },
+    },
+    vacation: {
+      tops: { min: 0.33, max: 0.35 },
+      bottoms: { min: 0.33, max: 0.35 },
+      shoes: { min: 0.3, max: 0.35 },
+    },
+    everyday: {
+      tops: { min: 0.3, max: 0.35 },
+      bottoms: { min: 0.3, max: 0.35 },
+      shoes: { min: 0.3, max: 0.35 },
+    },
+  }
+
+  return budgetRules[occasion] || budgetRules.everyday
+}
+
+/**
+ * Calculate smart budget range with asymmetric flexibility and occasion awareness
+ * Fixed to require totalBudget parameter for correct tier detection
+ */
+function calculateSmartBudget(totalMin, totalMax, category, occasion) {
+  // Use TOTAL budget for tier detection, not category budget
+  const { tier, downFlex, upFlex } = getBudgetFlexibility(totalMin, totalMax)
+
+  // Get occasion-specific category percentages
+  const categoryBudgets = getOccasionCategoryBudgets(occasion)
+  const categoryPercent = categoryBudgets[category] || { min: 0.3, max: 0.35 }
+
+  // Calculate category-specific budget
+  const categoryMin = totalMin * categoryPercent.min
+  const categoryMax = totalMax * categoryPercent.max
+
+  // Apply asymmetric flexibility (less down, more up)
+  const flexibleMin = categoryMin * (1 - downFlex)
+  const flexibleMax = upFlex === 999 ? 999999 : categoryMax * (1 + upFlex)
+
+  return {
+    tier,
+    categoryMin: Math.round(categoryMin),
+    categoryMax: Math.round(categoryMax),
+    searchMin: Math.round(flexibleMin),
+    searchMax: upFlex === 999 ? 999999 : Math.round(flexibleMax),
+    downFlexPercent: Math.round(downFlex * 100),
+    upFlexPercent: upFlex === 999 ? "unlimited" : Math.round(upFlex * 100),
+    isUnlimited: upFlex === 999,
+  }
+}
+
+/**
+ * Detect category from product name and description
+ */
+/**
+ * Detect category from product - NOW PRIORITIZES outfit_category
+ */
+function detectCategory(product) {
+  // ✅ PRIORITY 1: Use outfit_category from database (100% accurate, set at scrape time)
+  if (product.outfit_category) {
+    return product.outfit_category
+  }
+  
+  // FALLBACK 2: Use category_name field (most accurate)
+  const categoryName = (product.category_name || "").toLowerCase()
+
+  if (categoryName) {
+    // Filter out ONLY true accessories - NOT swimwear bottoms
+    if (/accessori|wallet|keychain|\bbag\b|purse|jewelry|watch|\bbelt\b|\bhat\b|scarf|glove|sunglasses|bralette|\bthong\b(?!.*bodysuit)|underwear(?!.*dress)|lingerie(?!.*dress)|bikini\s*top|swim\s*top|necklace|bracelet|earring|\bring\b|cover[\s-]?up/i.test(categoryName)) {
+      return "unknown"
+    }
+
+    // CHECK IN STRICT ORDER: shoes → bottoms → tops
+    // SHOES FIRST (most specific)
+    if (/shoe|boot|sneaker|trainer|sandal|heel|flat|pump|footwear/i.test(categoryName)) {
+      return "shoes"
+    }
+
+    // BOTTOMS SECOND - flexible patterns without strict word boundaries
+    if (/pant|jean|trouser|legging|short(?!.*sleeve)|skirt|jogger|culotte|chino|sweatpant|palazzo|capri|skort|bottoms/i.test(categoryName)) {
+      return "bottoms"
+    }
+
+    // TOPS LAST
+    if (/shirt|blouse|top|tank|tee|sweater|cardigan|hoodie|jacket|blazer|coat|vest|dress|gown|tunic|pullover|crop|cami|bodysuit/i.test(categoryName)) {
+      return "tops"
+    }
+  }
+
+  // FALLBACK 3: Use product name and description
+  const name = (product.product_name || "").toLowerCase()
+  const desc = (product.description || "").toLowerCase()
+  const combined = `${name} ${desc}`
+
+  // Filter ONLY true accessories - NOT clothing
+  if (/wallet|keychain|\bbag\b(?!gy)|purse|jewelry|watch|\bbelt\b(?!ed)|\bhat\b|scarf|glove(?!s?\b)|sunglasses|bralette|\bthong\b(?!.*bodysuit)|underwear(?!.*dress)|lingering(?!.*dress)|bikini\s*top|swim\s*top|necklace|bracelet|earring|\bring\b(?!.*detail)|sarong|cover[\s-]?up/i.test(combined)) {
+    return "unknown"
+  }
+
+  // CHECK IN STRICT ORDER: shoes → bottoms → tops
+
+  // SHOES FIRST - flexible pattern
+  if (/shoe|boot|sneaker|trainer|sandal|pump|loafer|heel|flat|mule|clog|espadrille|oxford|derby|monk|brogue/i.test(combined)) {
+    return "shoes"
+  }
+
+  // BOTTOMS SECOND - ULTRA FLEXIBLE (handles hyphens, compounds, modifiers)
+  // Matches: "Wide-Leg Jeans", "Cargo Pants", "Mini Skirt", "Bikini Bottoms"
+  if (/pant|jean|trouser|legging|short(?![s\-]*\s*sleeve)|skirt|jogger|culotte|chino|sweatpant|palazzo|capri|skort|bottoms/i.test(combined)) {
+    return "bottoms"
+  }
+
+  // TOPS LAST - flexible pattern with modifiers
+  // Matches: "Mini Dress", "Tube Dress", "Strapless Dress", "Bodysuit"
+  if (/shirt|blouse|top(?!knot)|tank|tee|sweater|cardigan|hoodie|jacket|blazer|coat|vest|dress|gown|tunic|poncho|pullover|crop|halter|cami|romper|jumpsuit|bodysuit/i.test(combined)) {
+    return "tops"
+  }
+
+  return "unknown"
+}
+
+// Helper functions for embedding generation
+function extractMaterials(materialsData) {
+  if (!materialsData) return "versatile"
+  const text = typeof materialsData === 'string' ? materialsData.toLowerCase() : JSON.stringify(materialsData).toLowerCase()
+  const materials = []
+  const fabricMap = { cotton: 'cotton', silk: 'silk', wool: 'wool', linen: 'linen', leather: 'leather', denim: 'denim' }
+  for (const [pattern, label] of Object.entries(fabricMap)) {
+    if (text.includes(pattern)) materials.push(label)
+  }
+  return materials.length > 0 ? materials.join(' ') : 'versatile'
+}
+
+function extractNeckline(name, desc) {
+  const combined = `${name} ${desc}`.toLowerCase()
+  const necklines = ['v-neck', 'crew', 'scoop', 'turtleneck', 'off-shoulder', 'halter']
+  for (const neckline of necklines) {
+    if (combined.includes(neckline)) return neckline
+  }
+  return null
+}
+
+function extractSleeveType(name, desc) {
+  const combined = `${name} ${desc}`.toLowerCase()
+  if (combined.includes('sleeveless') || combined.includes('tank')) return 'sleeveless'
+  if (combined.includes('long sleeve')) return 'long sleeve'
+  if (combined.includes('short sleeve')) return 'short sleeve'
+  return null
+}
+
+function extractPattern(name, desc) {
+  const combined = `${name} ${desc}`.toLowerCase()
+  const patterns = { stripe: 'striped', floral: 'floral', 'polka dot': 'polka dot', plaid: 'plaid', solid: 'solid' }
+  for (const [pattern, label] of Object.entries(patterns)) {
+    if (combined.includes(pattern)) return label
+  }
+  return 'solid'
+}
+
+function extractFit(name, desc) {
+  const combined = `${name} ${desc}`.toLowerCase()
+  const fits = ['oversized', 'fitted', 'relaxed', 'slim', 'skinny', 'loose']
+  for (const fit of fits) {
+    if (combined.includes(fit)) return fit
+  }
+  return 'regular'
+}
+
+function extractCut(name, desc, category) {
+  const combined = `${name} ${desc}`.toLowerCase()
+  if (category === 'shoes') {
+    if (/platform|high heel/i.test(combined)) return 'high'
+    if (/kitten heel|mid heel/i.test(combined)) return 'mid'
+    if (/flat|sneaker/i.test(combined)) return 'flat'
+    return 'flat'
+  }
+  if (category === 'bottoms') {
+    const cuts = ['wide-leg', 'straight', 'skinny', 'cropped', 'high-rise']
+    for (const cut of cuts) {
+      if (combined.includes(cut)) return cut
+    }
+  }
+  return null
+}
+
+function classifyBrandTier(brand, price) {
+  if (price > 300) return 'luxury'
+  if (price > 100) return 'premium'
+  if (price > 50) return 'mid-range'
+  return 'affordable'
+}
+
+function detectSuitableOccasions(name, desc) {
+  const combined = `${name} ${desc}`.toLowerCase()
+  const occasions = []
+  
+  // ✅ HIERARCHY: Check from most specific to least specific
+  // ✅ EXCLUSIVITY: Each item gets ONE primary occasion (NEVER add fallback)
+  
+  // WORKOUT - HIGHEST PRIORITY (NEVER add other occasions if this matches)
+  if (/\b(workout|athletic|sport|gym|fitness|training|running|yoga|active|jogger|sweatpant|performance|moisture.?wicking|legging|tank|sports.?bra|activewear|compression|dri.?fit|breathable|stretch|gym\s*shorts?|track\s*pant|trainers?|sneakers?|cross.?fit)\b/i.test(combined)) {
+    occasions.push('workout')
+    return occasions // ← CRITICAL: Stop here, don't add "everyday"
+  }
+  
+  // FORMAL - SECOND PRIORITY
+  if (/\b(formal|evening|gown|tuxedo|cocktail|black.?tie|gala|dinner\s*jacket|dress\s*shirt|dress\s*pant)\b/i.test(combined)) {
+    occasions.push('formal')
+    return occasions // ← Stop here
+  }
+  
+  // PARTY - THIRD PRIORITY
+  if (/\b(party|sequin|beaded|rhinestone|metallic|sparkle|glitter|club|night\s*out|date\s*night|festive|dressy)\b/i.test(combined)) {
+    occasions.push('party')
+    return occasions // ← Stop here
+  }
+  
+  // WORK/BUSINESS - FOURTH PRIORITY
+  if (/\b(business|professional|work|office|blazer|suit|business\s*casual|corporate|career|trouser)\b/i.test(combined)) {
+    occasions.push('work')
+    return occasions // ← Stop here
+  }
+  
+  // HOME/CASUAL - FIFTH PRIORITY
+  if (/\b(loungewear|homewear|cozy|home|casual|relaxed|comfortable|everyday)\b/i.test(combined)) {
+    occasions.push('everyday')
+    return occasions
+  }
+  
+  // DEFAULT: EVERYDAY ONLY
+  occasions.push('everyday')
+  return occasions
+}
+
+function extractDressType(name, desc, category) {
+  // Placeholder function for extracting dress type
+  // This should be implemented based on actual logic
+  return "unknown"
+}

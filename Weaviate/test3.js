@@ -60,8 +60,401 @@ function extractSubcategory(category_name) {
 }
 
 // ============================================================================
-// COLOR SYSTEM - Extraction, Normalization, Harmony
+// COLOR SYSTEM V4 - Extraction, Normalization, Harmony, Mood & Style Mapping
 // ============================================================================
+
+// ============================================================================
+// MOOD → COLOR HEX MAPPING (V4)
+// Maps emotional contexts to recommended colors with HEX values
+// ============================================================================
+const MOOD_COLOR_MAPPING = {
+  elegant: {
+    description: "Sophisticated, refined, and luxurious",
+    hexPalette: {
+      top: ["#000000", "#FFFFFF", "#2C3E50", "#1A1A1A", "#708090"],
+      bottom: ["#000000", "#2C3E50", "#1A1A1A", "#4A4A4A", "#FFFFFF"],
+      shoes: ["#000000", "#1A1A1A", "#8B4513", "#2C3E50"],
+      coat: ["#000000", "#2C3E50", "#1A1A1A", "#FFFFFF", "#708090"]
+    }
+  },
+  energized: {
+    description: "Vibrant, bold, and dynamic",
+    hexPalette: {
+      top: ["#FF4500", "#FFD700", "#FF6347", "#FFA500", "#FFFFFF"],
+      bottom: ["#000000", "#FFFFFF", "#2C3E50", "#1A1A1A"],
+      shoes: ["#FFFFFF", "#000000", "#FF4500", "#FFD700"],
+      coat: ["#FF4500", "#FFD700", "#000000", "#FFFFFF"]
+    }
+  },
+  romantic: {
+    description: "Soft, feminine, and dreamy",
+    hexPalette: {
+      top: ["#FFB6C1", "#E6E6FA", "#FFC0CB", "#FFFFFF", "#F5DEB3"],
+      bottom: ["#FFFFFF", "#F5F5DC", "#FFE4E1", "#E6E6FA"],
+      shoes: ["#FFB6C1", "#FFFFFF", "#D2B48C", "#DDA0DD"],
+      coat: ["#FFB6C1", "#E6E6FA", "#FFFFFF", "#FFC0CB"]
+    }
+  },
+  powerful: {
+    description: "Authoritative, confident, and commanding",
+    hexPalette: {
+      top: ["#000000", "#800020", "#2C3E50", "#FFFFFF", "#1A1A1A"],
+      bottom: ["#000000", "#2C3E50", "#1A1A1A", "#191970"],
+      shoes: ["#000000", "#800020", "#8B4513", "#2C3E50"],
+      coat: ["#000000", "#800020", "#2C3E50", "#1A1A1A"]
+    }
+  },
+  calm: {
+    description: "Peaceful, serene, and balanced",
+    hexPalette: {
+      top: ["#87CEEB", "#E0FFFF", "#B0E0E6", "#FFFFFF", "#F0FFF0"],
+      bottom: ["#FFFFFF", "#F5F5F5", "#E0FFFF", "#F0FFF0"],
+      shoes: ["#FFFFFF", "#D2B48C", "#87CEEB", "#B0E0E6"],
+      coat: ["#87CEEB", "#E0FFFF", "#FFFFFF", "#B0E0E6"]
+    }
+  },
+  flowing: {
+    description: "Graceful, fluid, and effortless",
+    hexPalette: {
+      top: ["#E6E6FA", "#F0E68C", "#FAFAD2", "#FFFFFF", "#FFEFD5"],
+      bottom: ["#FFFFFF", "#FFF8DC", "#FAF0E6", "#F5F5DC"],
+      shoes: ["#D2B48C", "#DEB887", "#F5DEB3", "#FFFFFF"],
+      coat: ["#E6E6FA", "#FAFAD2", "#FFFFFF", "#FAF0E6"]
+    }
+  },
+  optimist: {
+    description: "Cheerful, bright, and positive",
+    hexPalette: {
+      top: ["#FFD700", "#FFA500", "#FFFFFF", "#F0E68C", "#FFFACD"],
+      bottom: ["#FFFFFF", "#F5F5DC", "#FFFACD", "#000000"],
+      shoes: ["#FFFFFF", "#FFD700", "#D2B48C", "#FFA500"],
+      coat: ["#FFD700", "#FFA500", "#FFFFFF", "#F0E68C"]
+    }
+  },
+  mysterious: {
+    description: "Enigmatic, dark, and intriguing",
+    hexPalette: {
+      top: ["#191970", "#2F4F4F", "#4B0082", "#000000", "#301934"],
+      bottom: ["#000000", "#191970", "#2F4F4F", "#1A1A1A"],
+      shoes: ["#000000", "#191970", "#4B0082", "#2F4F4F"],
+      coat: ["#191970", "#2F4F4F", "#4B0082", "#000000"]
+    }
+  },
+  sweet: {
+    description: "Cute, playful, and youthful",
+    hexPalette: {
+      top: ["#FFB6C1", "#FFC0CB", "#FFFFFF", "#FFE4E1", "#FFF0F5"],
+      bottom: ["#FFFFFF", "#FFE4E1", "#FFF0F5", "#F5F5DC"],
+      shoes: ["#FFB6C1", "#FFFFFF", "#FFC0CB", "#D2B48C"],
+      coat: ["#FFB6C1", "#FFC0CB", "#FFFFFF", "#FFE4E1"]
+    }
+  },
+  passionate: {
+    description: "Intense, fiery, and bold",
+    hexPalette: {
+      top: ["#DC143C", "#FF0000", "#8B0000", "#000000", "#FFFFFF"],
+      bottom: ["#000000", "#1A1A1A", "#2C3E50", "#FFFFFF"],
+      shoes: ["#000000", "#DC143C", "#8B0000", "#8B4513"],
+      coat: ["#DC143C", "#8B0000", "#000000", "#B22222"]
+    }
+  },
+  general: {
+    description: "Balanced, versatile, and classic",
+    hexPalette: {
+      top: ["#000000", "#FFFFFF", "#2C3E50", "#808080", "#D3D3D3"],
+      bottom: ["#000000", "#FFFFFF", "#2C3E50", "#808080", "#1A1A1A"],
+      shoes: ["#000000", "#FFFFFF", "#8B4513", "#2C3E50"],
+      coat: ["#000000", "#2C3E50", "#808080", "#FFFFFF"]
+    }
+  }
+}
+
+// ============================================================================
+// STYLE → COLOR HEX MAPPING (V4 - COMPLETE 15-COLOR PALETTES FROM CLIENT SPEC)
+// ============================================================================
+const STYLE_COLOR_MAPPING = {
+  classic: {
+    description: "Timeless, elegant, and structured",
+    preferredColors: ["navy", "black", "white", "gray", "brown", "beige"],
+    fullPalette: ["#1C2541", "#2C3E50", "#34495E", "#5D4E37", "#8B4513", "#722F37", "#2E4A3E", "#F5F5DC", "#FFFFF0", "#FFFFFF", "#1A1A1A", "#708090", "#D4C4A8", "#4A4A4A", "#8B7355"],
+    colorNames: ["dark navy", "blue-gray", "deep gray", "camel brown", "saddle brown", "burgundy", "forest green", "beige", "ivory", "white", "black", "slate gray", "light khaki", "charcoal", "walnut"],
+    hexPalette: {
+      top: ["#FFFFFF", "#2C3E50", "#1A1A1A", "#F5F5DC", "#708090"],
+      bottom: ["#2C3E50", "#1A1A1A", "#8B4513", "#D4C4A8", "#4A4A4A"],
+      shoes: ["#8B4513", "#1A1A1A", "#2C3E50", "#D4C4A8", "#722F37"],
+      coat: ["#2C3E50", "#8B4513", "#1A1A1A", "#D4C4A8", "#722F37"]
+    }
+  },
+  romantic: {
+    description: "Soft, feminine, and dreamy",
+    preferredColors: ["pink", "rose", "cream", "lavender", "soft blue", "white"],
+    fullPalette: ["#FFB6C1", "#FFC0CB", "#FF69B4", "#DB7093", "#C71585", "#E6E6FA", "#DDA0DD", "#D8BFD8", "#FFE4E1", "#FFF0F5", "#FFDAB9", "#F5DEB3", "#FFFACD", "#FAF0E6", "#FDF5E6"],
+    colorNames: ["light pink", "pink", "hot pink", "pale violet red", "medium violet red", "lavender", "plum", "thistle", "misty rose", "lavender blush", "peach puff", "wheat", "lemon chiffon", "linen", "old lace"],
+    hexPalette: {
+      top: ["#FFB6C1", "#FFC0CB", "#E6E6FA", "#FFFFFF", "#FFE4E1"],
+      bottom: ["#FFFFFF", "#F5DEB3", "#FFE4E1", "#FFC0CB", "#FAF0E6"],
+      shoes: ["#FFB6C1", "#FFFFFF", "#D8BFD8", "#E6E6FA", "#FFDAB9"],
+      coat: ["#FFB6C1", "#E6E6FA", "#FFFFFF", "#FFC0CB", "#DDA0DD"]
+    }
+  },
+  minimalist: {
+    description: "Simple, clean, and essential-focused",
+    preferredColors: ["black", "white", "gray", "beige", "navy", "cream", "stone", "charcoal"],
+    fullPalette: ["#000000", "#1A1A1A", "#2D2D2D", "#4A4A4A", "#6B6B6B", "#8C8C8C", "#A8A8A8", "#C4C4C4", "#E0E0E0", "#F0F0F0", "#FAFAFA", "#FFFFFF", "#E8DCD0", "#D3C4B5", "#C2B8A3"],
+    colorNames: ["pure black", "near black", "dark charcoal", "charcoal", "dark gray", "gray", "medium gray", "light gray", "silver", "off-white", "broken white", "pure white", "greige", "taupe", "stone"],
+    hexPalette: {
+      top: ["#FFFFFF", "#000000", "#808080", "#F0F0F0", "#E8DCD0"],
+      bottom: ["#000000", "#FFFFFF", "#4A4A4A", "#1A1A1A", "#2C3E50"],
+      shoes: ["#000000", "#FFFFFF", "#808080", "#D3C4B5", "#1A1A1A"],
+      coat: ["#000000", "#FFFFFF", "#4A4A4A", "#2C3E50", "#E8DCD0"]
+    }
+  },
+  casual: {
+    description: "Relaxed, everyday, and comfortable",
+    preferredColors: ["blue", "denim", "gray", "white", "khaki", "brown", "green", "beige", "navy", "black", "red", "olive", "tan", "burgundy", "coral", "teal"],
+    fullPalette: ["#4169E1", "#6495ED", "#87CEEB", "#708090", "#556B2F", "#6B8E23", "#8FBC8F", "#F5DEB3", "#D2B48C", "#BC8F8F", "#CD853F", "#A0522D", "#FFFFF0", "#FFFAF0", "#FAF0E6", "#DEB887", "#B22222", "#2F4F4F"],
+    colorNames: ["royal blue", "cornflower blue", "sky blue", "slate gray", "dark olive", "olive drab", "dark sea green", "wheat", "tan", "rosy brown", "peru", "sienna", "ivory", "floral white", "linen", "burlywood", "firebrick", "dark slate gray"],
+    hexPalette: {
+      top: ["#FFFFFF", "#000000", "#4169E1", "#708090", "#6B8E23"],
+      bottom: ["#000000", "#2C3E50", "#D2B48C", "#4169E1", "#556B2F"],
+      shoes: ["#FFFFFF", "#000000", "#D2B48C", "#8B4513", "#708090"],
+      coat: ["#2C3E50", "#000000", "#708090", "#8B4513", "#556B2F"]
+    }
+  },
+  elegant: {
+    description: "Sophisticated, refined, and luxurious",
+    preferredColors: ["black", "navy", "gray", "burgundy", "white", "gold"],
+    fullPalette: ["#000000", "#1A1A1A", "#2C3E50", "#191970", "#4A4A4A", "#800020", "#722F37", "#C0C0C0", "#FFD700", "#FFFFFF", "#708090", "#36454F", "#F5F5F5", "#D4AF37", "#B8860B"],
+    colorNames: ["black", "near black", "navy", "midnight blue", "charcoal", "burgundy", "wine", "silver", "gold", "white", "slate", "charcoal", "off-white", "metallic gold", "dark gold"],
+    hexPalette: {
+      top: ["#000000", "#FFFFFF", "#2C3E50", "#C0C0C0", "#708090"],
+      bottom: ["#000000", "#2C3E50", "#1A1A1A", "#FFFFFF", "#4A4A4A"],
+      shoes: ["#000000", "#1A1A1A", "#8B4513", "#C0C0C0", "#FFD700"],
+      coat: ["#000000", "#2C3E50", "#1A1A1A", "#C0C0C0", "#800020"]
+    }
+  },
+  sporty: {
+    description: "Athletic, dynamic, and active",
+    preferredColors: ["blue", "black", "white", "red", "gray", "green"],
+    fullPalette: ["#00BFFF", "#1E90FF", "#00CED1", "#20B2AA", "#3CB371", "#32CD32", "#7FFF00", "#ADFF2F", "#FFFF00", "#FFD700", "#FFA500", "#FF4500", "#FFFFFF", "#000000", "#C0C0C0", "#FF6B6B"],
+    colorNames: ["deep sky blue", "dodger blue", "dark turquoise", "light sea green", "medium sea green", "lime green", "chartreuse", "green yellow", "yellow", "gold", "orange", "orange red", "white", "black", "silver", "coral"],
+    hexPalette: {
+      top: ["#000000", "#FFFFFF", "#1E90FF", "#FF4500", "#32CD32"],
+      bottom: ["#000000", "#2C3E50", "#1E90FF", "#FFFFFF", "#4A4A4A"],
+      shoes: ["#FFFFFF", "#000000", "#1E90FF", "#FF4500", "#32CD32"],
+      coat: ["#000000", "#2C3E50", "#1E90FF", "#FFFFFF", "#FF4500"]
+    }
+  },
+  boohoo: {
+    description: "Bold, trendy, and statement-making",
+    preferredColors: ["red", "pink", "purple", "blue", "green", "gold", "orange"],
+    fullPalette: ["#FF0000", "#FF4500", "#FF6347", "#FF1493", "#FF00FF", "#8B008B", "#9400D3", "#8A2BE2", "#4B0082", "#0000FF", "#00CED1", "#00FF7F", "#ADFF2F", "#FFD700", "#FFA500", "#DC143C"],
+    colorNames: ["pure red", "orange red", "tomato", "deep pink", "magenta", "dark magenta", "dark violet", "blue violet", "indigo", "pure blue", "dark turquoise", "spring green", "green yellow", "gold", "orange", "crimson"],
+    hexPalette: {
+      top: ["#FF1493", "#FF0000", "#8A2BE2", "#FFD700", "#FFFFFF"],
+      bottom: ["#000000", "#0000FF", "#4B0082", "#FFFFFF", "#1A1A1A"],
+      shoes: ["#FF1493", "#FFD700", "#000000", "#FF0000", "#8A2BE2"],
+      coat: ["#FF0000", "#8A2BE2", "#000000", "#FFD700", "#FF1493"]
+    }
+  },
+  nordic: {
+    description: "Clean, cozy, and nature-inspired",
+    preferredColors: ["white", "cream", "gray", "beige", "soft blue", "forest green"],
+    fullPalette: ["#FFFFFF", "#F5F5F5", "#FAFAFA", "#F5F5DC", "#E8DCD0", "#D3C4B5", "#C4C4C4", "#A8A8A8", "#808080", "#87CEEB", "#B0E0E6", "#2E4A3E", "#3CB371", "#556B2F", "#8FBC8F"],
+    colorNames: ["white", "white smoke", "snow", "beige", "greige", "taupe", "light gray", "medium gray", "gray", "sky blue", "powder blue", "forest green", "medium sea green", "dark olive", "dark sea green"],
+    hexPalette: {
+      top: ["#FFFFFF", "#F5F5DC", "#E8DCD0", "#87CEEB", "#2E4A3E"],
+      bottom: ["#FFFFFF", "#F5F5F5", "#E8DCD0", "#C4C4C4", "#556B2F"],
+      shoes: ["#FFFFFF", "#D3C4B5", "#8B4513", "#2E4A3E", "#808080"],
+      coat: ["#E8DCD0", "#2E4A3E", "#FFFFFF", "#D3C4B5", "#556B2F"]
+    }
+  },
+  bohemian: {
+    description: "Free-spirited, artistic, and earthy",
+    preferredColors: ["brown", "tan", "cream", "rust", "olive", "terracotta"],
+    fullPalette: ["#8B4513", "#D2691E", "#CD853F", "#DEB887", "#F4A460", "#D2B48C", "#BC8F8F", "#A0522D", "#556B2F", "#6B8E23", "#808000", "#F5DEB3", "#FAEBD7", "#FFE4C4", "#E8DCD0"],
+    colorNames: ["saddle brown", "chocolate", "peru", "burlywood", "sandy brown", "tan", "rosy brown", "sienna", "dark olive green", "olive drab", "olive", "wheat", "antique white", "bisque", "greige"],
+    hexPalette: {
+      top: ["#DEB887", "#F5DEB3", "#FFFFFF", "#F4A460", "#D2691E"],
+      bottom: ["#8B4513", "#D2691E", "#DEB887", "#556B2F", "#D2B48C"],
+      shoes: ["#8B4513", "#D2B48C", "#DEB887", "#CD853F", "#A0522D"],
+      coat: ["#DEB887", "#8B4513", "#D2691E", "#F4A460", "#556B2F"]
+    }
+  },
+  edgy: {
+    description: "Bold, unconventional, and rebellious",
+    preferredColors: ["black", "red", "silver", "purple", "dark gray"],
+    fullPalette: ["#000000", "#1A1A1A", "#2D2D2D", "#DC143C", "#8B0000", "#4B0082", "#800080", "#C0C0C0", "#A9A9A9", "#696969", "#FFFFFF", "#B22222", "#8B008B", "#483D8B", "#2F4F4F"],
+    colorNames: ["black", "near black", "dark charcoal", "crimson", "dark red", "indigo", "purple", "silver", "dark gray", "dim gray", "white", "firebrick", "dark magenta", "dark slate blue", "dark slate gray"],
+    hexPalette: {
+      top: ["#000000", "#1A1A1A", "#DC143C", "#FFFFFF", "#4B0082"],
+      bottom: ["#000000", "#1A1A1A", "#2C3E50", "#696969", "#2D2D2D"],
+      shoes: ["#000000", "#1A1A1A", "#DC143C", "#C0C0C0", "#4B0082"],
+      coat: ["#000000", "#1A1A1A", "#DC143C", "#2C3E50", "#4B0082"]
+    }
+  },
+  glamorous: {
+    description: "Luxurious, sparkly, and show-stopping",
+    preferredColors: ["gold", "silver", "black", "white", "red"],
+    fullPalette: ["#FFD700", "#D4AF37", "#B8860B", "#C0C0C0", "#A9A9A9", "#000000", "#1A1A1A", "#FFFFFF", "#F5F5F5", "#DC143C", "#8B0000", "#800020", "#E6E6FA", "#DDA0DD", "#FF69B4"],
+    colorNames: ["gold", "metallic gold", "dark goldenrod", "silver", "dark gray", "black", "near black", "white", "white smoke", "crimson", "dark red", "burgundy", "lavender", "plum", "hot pink"],
+    hexPalette: {
+      top: ["#FFD700", "#C0C0C0", "#000000", "#FFFFFF", "#D4AF37"],
+      bottom: ["#000000", "#FFFFFF", "#2C3E50", "#1A1A1A", "#C0C0C0"],
+      shoes: ["#FFD700", "#C0C0C0", "#000000", "#D4AF37", "#DC143C"],
+      coat: ["#FFD700", "#C0C0C0", "#000000", "#FFFFFF", "#800020"]
+    }
+  },
+  preppy: {
+    description: "Classic, polished, and collegiate",
+    preferredColors: ["navy", "white", "red", "green", "khaki", "pink"],
+    fullPalette: ["#000080", "#2C3E50", "#FFFFFF", "#DC143C", "#228B22", "#006400", "#F0E68C", "#D2B48C", "#FFB6C1", "#FFC0CB", "#87CEEB", "#F5F5DC", "#FFFFF0", "#8B4513", "#B22222"],
+    colorNames: ["navy", "dark navy", "white", "crimson", "forest green", "dark green", "khaki", "tan", "light pink", "pink", "sky blue", "beige", "ivory", "saddle brown", "firebrick"],
+    hexPalette: {
+      top: ["#FFFFFF", "#000080", "#228B22", "#DC143C", "#FFB6C1"],
+      bottom: ["#000080", "#2C3E50", "#D2B48C", "#FFFFFF", "#F0E68C"],
+      shoes: ["#8B4513", "#D2B48C", "#000080", "#FFFFFF", "#228B22"],
+      coat: ["#000080", "#228B22", "#DC143C", "#2C3E50", "#FFFFFF"]
+    }
+  },
+  modern: {
+    description: "Contemporary, sleek, and fashion-forward",
+    preferredColors: ["black", "white", "gray", "navy", "steel blue"],
+    fullPalette: ["#000000", "#1A1A1A", "#2D2D2D", "#FFFFFF", "#F5F5F5", "#808080", "#A9A9A9", "#C0C0C0", "#2C3E50", "#34495E", "#4682B4", "#5F9EA0", "#708090", "#778899", "#B0C4DE"],
+    colorNames: ["black", "near black", "dark charcoal", "white", "white smoke", "gray", "dark gray", "silver", "navy", "dark slate", "steel blue", "cadet blue", "slate gray", "light slate gray", "light steel blue"],
+    hexPalette: {
+      top: ["#000000", "#FFFFFF", "#808080", "#2C3E50", "#4682B4"],
+      bottom: ["#000000", "#2C3E50", "#808080", "#FFFFFF", "#1A1A1A"],
+      shoes: ["#000000", "#FFFFFF", "#808080", "#2C3E50", "#4682B4"],
+      coat: ["#000000", "#2C3E50", "#808080", "#FFFFFF", "#4682B4"]
+    }
+  }
+}
+
+// ============================================================================
+// HEX TO COLOR NAME MAPPING (V4 - For Semantic Search)
+// ============================================================================
+const HEX_TO_COLOR_NAME_V4 = {
+  "#000000": "black", "#1A1A1A": "black", "#2C3E50": "navy", "#4A4A4A": "charcoal",
+  "#FFFFFF": "white", "#F5F5F5": "white", "#F5F5DC": "cream", "#FFF8DC": "cream",
+  "#808080": "grey", "#A9A9A9": "grey", "#D3D3D3": "light grey", "#C0C0C0": "silver",
+  "#696969": "dark grey", "#708090": "slate", "#DCDCDC": "grey",
+  "#000080": "navy", "#191970": "midnight blue", "#4169E1": "royal blue",
+  "#4682B4": "steel blue", "#87CEEB": "sky blue", "#ADD8E6": "light blue",
+  "#228B22": "forest green", "#32CD32": "lime green", "#2E8B57": "sea green",
+  "#DC143C": "crimson", "#FF0000": "red", "#8B0000": "dark red", "#800020": "burgundy",
+  "#FFB6C1": "light pink", "#FFC0CB": "pink", "#FF69B4": "hot pink",
+  "#FF4500": "orange red", "#FFA500": "orange", "#FFD700": "gold", "#FFFF00": "yellow",
+  "#4B0082": "indigo", "#800080": "purple", "#E6E6FA": "lavender", "#DDA0DD": "plum",
+  "#8B4513": "brown", "#D2B48C": "tan", "#DEB887": "burlywood", "#F5DEB3": "wheat"
+}
+
+/**
+ * ✅ V4: Convert HEX to color name for semantic search
+ */
+function hexToColorNameV4(hex) {
+  if (!hex) return null
+  const normalized = hex.toUpperCase()
+  if (HEX_TO_COLOR_NAME_V4[normalized]) return HEX_TO_COLOR_NAME_V4[normalized]
+  
+  // Fallback: determine from RGB
+  const r = parseInt(normalized.slice(1, 3), 16)
+  const g = parseInt(normalized.slice(3, 5), 16)
+  const b = parseInt(normalized.slice(5, 7), 16)
+  
+  if (r > 200 && g > 200 && b > 200) return "white"
+  if (r < 50 && g < 50 && b < 50) return "black"
+  if (r > g && r > b) return r > 200 ? "red" : "burgundy"
+  if (g > r && g > b) return "green"
+  if (b > r && b > g) return b > 200 ? "blue" : "navy"
+  return "grey"
+}
+
+/**
+ * ✅ V4: Generate allowed color palette based on mood, style, and user preferences
+ * @param {Object} options - { mood, style, userColors }
+ * @returns {Object} - { top: [...], bottom: [...], shoes: [...], coat: [...] }
+ */
+function generateAllowedColorPalette(options = {}) {
+  const { mood = 'general', style = 'casual', userColors = [] } = options
+  
+  const moodPalette = MOOD_COLOR_MAPPING[mood]?.hexPalette || MOOD_COLOR_MAPPING.general.hexPalette
+  const stylePalette = STYLE_COLOR_MAPPING[style]?.hexPalette || STYLE_COLOR_MAPPING.casual.hexPalette
+  
+  const result = { top: [], bottom: [], shoes: [], coat: [] }
+  
+  for (const category of ['top', 'bottom', 'shoes', 'coat']) {
+    const moodColors = moodPalette[category] || []
+    const styleColors = stylePalette[category] || []
+    
+    // Find intersection
+    let intersection = moodColors.filter(c => styleColors.includes(c))
+    
+    // If intersection too small, union instead
+    if (intersection.length < 3) {
+      intersection = [...new Set([...moodColors.slice(0, 3), ...styleColors.slice(0, 2)])]
+    }
+    
+    // Add user colors with highest priority
+    if (userColors.length > 0) {
+      const userHexColors = userColors.map(c => {
+        if (c.startsWith('#')) return c.toUpperCase()
+        return colorNameToHex(c)
+      }).filter(Boolean)
+      
+      intersection = [...new Set([...userHexColors, ...intersection])]
+    }
+    
+    // Format with names
+    result[category] = intersection.slice(0, 5).map(hex => ({
+      hex: hex,
+      name: hexToColorNameV4(hex)
+    }))
+  }
+  
+  console.log(`🎨 Generated Color Palette (mood: ${mood}, style: ${style}):`)
+  console.log(`   Top: ${result.top.map(c => c.name).join(', ')}`)
+  console.log(`   Bottom: ${result.bottom.map(c => c.name).join(', ')}`)
+  console.log(`   Shoes: ${result.shoes.map(c => c.name).join(', ')}`)
+  
+  return result
+}
+
+/**
+ * ✅ V4: Convert color name to HEX
+ */
+function colorNameToHex(colorName) {
+  const nameToHex = {
+    black: "#000000", white: "#FFFFFF", navy: "#2C3E50", grey: "#808080", gray: "#808080",
+    red: "#DC143C", blue: "#4682B4", green: "#228B22", pink: "#FFB6C1", purple: "#800080",
+    orange: "#FFA500", yellow: "#FFD700", brown: "#8B4513", cream: "#F5F5DC", beige: "#F5F5DC",
+    burgundy: "#800020", gold: "#FFD700", silver: "#C0C0C0", tan: "#D2B48C", coral: "#FF6347"
+  }
+  return nameToHex[colorName?.toLowerCase()] || null
+}
+
+/**
+ * ✅ V4: Score outfit colors for harmony
+ */
+function scoreOutfitColorsV4(outfitColors) {
+  if (!outfitColors || outfitColors.length < 2) return { score: 100, harmony: 'single_item' }
+  
+  const colorNames = outfitColors.map(c => typeof c === 'string' ? hexToColorNameV4(c) : c.name).filter(Boolean)
+  
+  // Use existing harmony checking
+  return checkOutfitColorHarmony(colorNames)
+}
+
+// Export V4 utilities
+const ColorSystemV4 = {
+  MOOD_COLOR_MAPPING,
+  STYLE_COLOR_MAPPING,
+  HEX_TO_COLOR_NAME_V4,
+  hexToColorNameV4,
+  generateAllowedColorPalette,
+  colorNameToHex,
+  scoreOutfitColorsV4
+}
 
 /**
  * ✅ COMPREHENSIVE COLOR MAPPING
@@ -144,50 +537,84 @@ const COLOR_WHEEL_POSITION = {
 }
 
 /**
- * ✅ COLOR HARMONY RULES
- * Defines which colors work well together
+ * ✅ COLOR HARMONY RULES (FROM CLIENT SPEC)
+ * Defines which colors work well together per primary color
  */
 const COLOR_HARMONY = {
-  // Complementary pairs (opposite on color wheel)
-  complementary: {
-    red: ['green', 'teal'],
-    orange: ['blue', 'navy'],
-    yellow: ['purple', 'violet'],
-    green: ['red', 'pink', 'coral'],
-    blue: ['orange', 'coral', 'rust'],
-    purple: ['yellow', 'gold', 'mustard'],
-    pink: ['green', 'olive', 'sage'],
+  // Per-color harmony rules from client spec
+  black: {
+    complementary: ['white', 'gray', 'silver'],
+    analogous: ['charcoal', 'navy', 'dark gray'],
+    triadic: ['red', 'gold', 'white']
   },
-  
-  // Analogous (adjacent colors)
-  analogous: {
-    red: ['orange', 'pink', 'coral'],
-    orange: ['red', 'yellow', 'coral', 'peach'],
-    yellow: ['orange', 'green', 'lime', 'gold'],
-    green: ['yellow', 'blue', 'teal', 'olive'],
-    blue: ['green', 'purple', 'teal', 'navy'],
-    purple: ['blue', 'pink', 'violet', 'lavender'],
-    pink: ['purple', 'red', 'coral', 'blush'],
+  white: {
+    complementary: ['black', 'navy', 'gray'],
+    analogous: ['cream', 'beige', 'ivory'],
+    triadic: ['blue', 'red', 'yellow']
   },
-  
-  // Triadic (3 colors evenly spaced)
-  triadic: {
-    red: ['yellow', 'blue'],
-    orange: ['green', 'purple'],
-    yellow: ['blue', 'red'],
-    green: ['purple', 'orange'],
-    blue: ['red', 'yellow'],
-    purple: ['orange', 'green'],
-    pink: ['yellow', 'teal'],
+  navy: {
+    complementary: ['white', 'cream', 'beige'],
+    analogous: ['blue', 'royal blue', 'dark blue'],
+    triadic: ['burgundy', 'gold', 'white']
+  },
+  beige: {
+    complementary: ['brown', 'cream', 'white'],
+    analogous: ['tan', 'sand', 'khaki'],
+    triadic: ['navy', 'burgundy', 'forest green']
+  },
+  gray: {
+    complementary: ['white', 'black', 'silver'],
+    analogous: ['charcoal', 'light gray', 'slate'],
+    triadic: ['blue', 'pink', 'yellow']
+  },
+  red: {
+    complementary: ['green', 'teal', 'mint'],
+    analogous: ['orange', 'pink', 'coral'],
+    triadic: ['yellow', 'blue']
+  },
+  blue: {
+    complementary: ['orange', 'coral', 'rust'],
+    analogous: ['green', 'purple', 'teal', 'navy'],
+    triadic: ['red', 'yellow']
+  },
+  green: {
+    complementary: ['red', 'pink', 'coral'],
+    analogous: ['yellow', 'blue', 'teal', 'olive'],
+    triadic: ['purple', 'orange']
+  },
+  pink: {
+    complementary: ['green', 'olive', 'sage'],
+    analogous: ['purple', 'red', 'coral', 'blush'],
+    triadic: ['yellow', 'teal']
+  },
+  purple: {
+    complementary: ['yellow', 'gold', 'mustard'],
+    analogous: ['blue', 'pink', 'violet', 'lavender'],
+    triadic: ['orange', 'green']
+  },
+  orange: {
+    complementary: ['blue', 'navy', 'teal'],
+    analogous: ['red', 'yellow', 'coral', 'peach'],
+    triadic: ['green', 'purple']
+  },
+  yellow: {
+    complementary: ['purple', 'violet', 'lavender'],
+    analogous: ['orange', 'green', 'lime', 'gold'],
+    triadic: ['blue', 'red']
+  },
+  brown: {
+    complementary: ['cream', 'white', 'beige'],
+    analogous: ['tan', 'camel', 'cognac', 'rust'],
+    triadic: ['navy', 'teal']
   },
   
   // Universal neutrals (go with everything)
-  neutrals: ['black', 'white', 'grey', 'beige', 'tan', 'nude', 'cream', 'ivory', 'brown', 'navy'],
+  neutrals: ['black', 'white', 'grey', 'gray', 'beige', 'tan', 'nude', 'cream', 'ivory', 'brown', 'navy', 'charcoal'],
   
   // Metallic accent rules
   metallics: {
-    warm: ['gold', 'bronze', 'copper', 'rose_gold'],  // Go with warm colors
-    cool: ['silver', 'platinum', 'pewter'],           // Go with cool colors
+    warm: ['gold', 'bronze', 'copper', 'rose_gold'],
+    cool: ['silver', 'platinum', 'pewter']
   },
 }
 
@@ -391,31 +818,51 @@ function checkOutfitColorHarmony(outfitColors) {
 }
 
 /**
- * ✅ Build color-enhanced search query
- * Injects user's preferred colors into the semantic query
+ * ✅ IMPROVED v3: Build color-enhanced search query
+ * Injects ALL user's preferred colors with weighting into the semantic query
+ * Strategy: Add colors as prefix AND suffix + weighted mentions for ~90% color accuracy
  */
 function buildColorEnhancedQuery(query, userColors, category) {
   if (!userColors || userColors.length === 0) return query
   
   const normalizedColors = normalizeUserColors(userColors)
   
-  // Add color terms to query with category context
-  const colorTerms = normalizedColors.map(color => {
-    // Add common variations
+  // Build weighted color injection (first color = 3x, second = 2x, third = 1x)
+  const weightedColorTerms = []
+  
+  normalizedColors.forEach((color, index) => {
+    const weight = 3 - index // 3, 2, 1 based on priority
     const variations = [color]
     
-    // Add specific shade keywords for better matching
+    // Add common variations for each base color
     if (color === 'purple') variations.push('violet', 'lavender', 'plum')
-    if (color === 'green') variations.push('olive', 'sage', 'emerald')
-    if (color === 'brown') variations.push('tan', 'camel', 'cognac')
-    if (color === 'blue') variations.push('navy', 'cobalt', 'denim')
-    if (color === 'pink') variations.push('blush', 'rose', 'coral')
+    if (color === 'green') variations.push('olive', 'sage', 'emerald', 'forest')
+    if (color === 'brown') variations.push('tan', 'camel', 'cognac', 'beige')
+    if (color === 'blue') variations.push('navy', 'cobalt', 'denim', 'indigo')
+    if (color === 'pink') variations.push('blush', 'rose', 'coral', 'fuchsia')
+    if (color === 'grey') variations.push('gray', 'charcoal', 'silver', 'slate')
+    if (color === 'black') variations.push('onyx', 'jet', 'ebony')
+    if (color === 'white') variations.push('ivory', 'cream', 'pearl')
+    if (color === 'red') variations.push('burgundy', 'wine', 'crimson', 'scarlet')
+    if (color === 'orange') variations.push('coral', 'peach', 'rust', 'amber')
+    if (color === 'yellow') variations.push('gold', 'mustard', 'honey')
     
-    return variations.join(' ')
+    // Repeat color based on weight (more important = more mentions)
+    for (let i = 0; i < weight; i++) {
+      weightedColorTerms.push(variations.join(' '))
+    }
   })
   
-  // Combine with original query
-  return `${colorTerms.join(' ')} ${query}`
+  // Build prefix (colors at start for strong signal)
+  const colorPrefix = normalizedColors.slice(0, 2).join(' ')
+  
+  // Build suffix (all colors for reinforcement)
+  const colorSuffix = normalizedColors.join(' ')
+  
+  // Combine: [color prefix] [weighted colors] [original query] [color suffix]
+  const enhancedQuery = `${colorPrefix} ${weightedColorTerms.join(' ')} ${query} ${colorSuffix}`
+  
+  return enhancedQuery
 }
 
 // Export color utilities for use in other modules
@@ -1438,41 +1885,69 @@ function buildSemanticQuery(query, occasion, category, style = null, userColors 
   const occasionMapping = OCCASION_PRODUCT_MAPPING[occasion] || OCCASION_PRODUCT_MAPPING.everyday
   const productTypes = occasionMapping[category] || []
   
-  // Start with color-enhanced query if user colors provided
-  let baseQuery = query
-  if (userColors && userColors.length > 0) {
-    baseQuery = buildColorEnhancedQuery(query, userColors, category)
-    console.log(`   🎨 Color-enhanced query: "${baseQuery.substring(0, 80)}..."`)
-  }
+  // Get style rules for fabric/shoe constraints
+  const styleKey = (style || "casual").toLowerCase()
+  const fabricRules = AI_STYLE_FABRIC_RULES[styleKey] || AI_STYLE_FABRIC_RULES.casual
+  const shoeRules = AI_STYLE_SHOE_RULES[styleKey] || AI_STYLE_SHOE_RULES.casual
   
-  let searchTerms = [baseQuery]
-  
-  // Add relevant product types (the actual terms that exist in product descriptions)
-  if (productTypes.length > 0) {
-    // Take top 5 most relevant product types to avoid overly broad queries
-    const relevantTypes = productTypes.slice(0, 5)
-    searchTerms.push(...relevantTypes)
-  }
-  
-  // Add style-specific product descriptors (not abstract words, but product attributes)
-  if (style) {
-    const styleConfig = STYLE_PRODUCT_MODIFIERS[style.toLowerCase()]
-    if (styleConfig) {
-      // Add a few style adjectives that might appear in product descriptions
-      const styleTerms = styleConfig.adjectives.slice(0, 3)
-      searchTerms.push(...styleTerms)
+  // Extract colors - prioritize user colors
+  let primaryColor = "black"
+  let secondaryColor = "white"
+  if (userColors) {
+    if (Array.isArray(userColors)) {
+      primaryColor = userColors[0]?.name || userColors[0] || "black"
+      secondaryColor = userColors[1]?.name || userColors[1] || primaryColor
+    } else if (userColors[category]) {
+      const catColors = userColors[category]
+      primaryColor = catColors[0]?.name || catColors[0] || "black"
+      secondaryColor = catColors[1]?.name || catColors[1] || primaryColor
     }
   }
   
-  // Add the category itself for reinforcement
-  searchTerms.push(category)
+  // Get allowed fabrics and shoe types from rules
+  const allowedFabrics = fabricRules.allow.split(",").slice(0, 2).map(f => f.trim())
+  const allowedShoes = shoeRules.allow.split(",").slice(0, 3).map(s => s.trim())
   
-  // Build final query - product types first for stronger matching
-  const semanticQuery = searchTerms.join(' ')
+  // Get top product types for this occasion/category
+  const topProductTypes = productTypes.slice(0, 3)
   
-  console.log(`   🎯 Query strategy: occasion "${occasion}" → product types: [${productTypes.slice(0, 5).join(', ')}]`)
+  // Build ASOS-style query pattern: "[Color] [Modifier] [Fabric] [Item] in [Color]"
+  // Example: "black cotton relaxed t-shirt in black comfortable casual"
+  let semanticQuery = ""
   
-  return semanticQuery
+  if (category === "shoes") {
+    // Shoe query: "[Color] [Style] [ShoeType] [Color] [Occasion keywords]"
+    semanticQuery = `${primaryColor} ${allowedShoes[0]} ${allowedShoes[1] || ""} ${primaryColor} ${topProductTypes.join(" ")} ${secondaryColor} comfortable`
+  } else if (category === "tops" || category === "top") {
+    // Top query: "[Color] [Fabric] [ProductType] in [Color] [Style modifiers]"
+    semanticQuery = `${primaryColor} ${allowedFabrics[0]} ${topProductTypes[0] || "top"} in ${primaryColor} ${topProductTypes.slice(1).join(" ")} ${secondaryColor} ${allowedFabrics[1] || ""}`
+  } else if (category === "bottoms" || category === "bottom") {
+    // Bottom query: "[Color] [Fabric] [ProductType] in [Color] [Fit modifiers]"
+    semanticQuery = `${primaryColor} ${allowedFabrics[0]} ${topProductTypes[0] || "pants"} in ${primaryColor} ${topProductTypes.slice(1).join(" ")} ${secondaryColor}`
+  } else if (category === "dresses" || category === "dress") {
+    // Dress query: "[Color] [Fabric] [DressType] in [Color]"
+    semanticQuery = `${primaryColor} ${allowedFabrics[0]} ${topProductTypes[0] || "dress"} in ${primaryColor} ${topProductTypes.slice(1).join(" ")} ${secondaryColor}`
+  } else {
+    // Generic fallback
+    semanticQuery = `${primaryColor} ${topProductTypes.join(" ")} ${category} in ${primaryColor} ${allowedFabrics[0]} ${secondaryColor}`
+  }
+  
+  // Add color weighting (5x/3x/1x) - inject primary color heavily
+  const colorWeight = `${primaryColor} ${primaryColor} ${primaryColor} ${primaryColor} ${primaryColor} ${secondaryColor} ${secondaryColor} ${secondaryColor}`
+  semanticQuery = `${colorWeight} ${semanticQuery} ${primaryColor} ${secondaryColor}`
+  
+  // Append original query if provided (may contain additional context)
+  if (query && query.trim() && query !== semanticQuery) {
+    semanticQuery = `${semanticQuery} ${query}`
+  }
+  
+  console.log(`   🎯 ASOS-style query: occasion="${occasion}" style="${styleKey}"`)
+  console.log(`   📦 Product types: [${topProductTypes.join(', ')}]`)
+  console.log(`   👗 Fabrics: [${allowedFabrics.join(', ')}]`)
+  console.log(`   👟 Shoes: [${allowedShoes.join(', ')}]`)
+  console.log(`   🎨 Colors: primary="${primaryColor}" secondary="${secondaryColor}"`)
+  
+  return semanticQuery.trim()
 }
 
 /**
@@ -1556,45 +2031,118 @@ app.get("/api/count", async (req, res) => {
 })
 
 /**
- * MAIN SEARCH ENDPOINT (IMPROVED v2)
+ * MAIN SEARCH ENDPOINT (V5 - AI ENHANCED)
  * ✅ KEY CHANGES:
- * - Removed occasion fallback filter (trust embeddings)
- * - Increased Top-K fetch limit
- * - Added heelType safety filters for shoes
- * - Simplified post-filtering
+ * - Accepts full quiz profile data OR simple query
+ * - Generates AI-powered ASOS-style queries internally
+ * - Applies fabric + shoe style rules
+ * - Single endpoint handles everything
  */
 app.post("/api/search", async (req, res) => {
   try {
     const {
-      query,
+      // Simple mode (backwards compatible)
+      query = null,
+      // V5: Full profile mode
+      profile = null,
+      // Common params
       limit = 80,
       category = "general",
       occasion = "everyday",
       priceRange = null,
       totalBudget = null,
       style = null,
-      userColors = null,  // ✅ NEW: Accept user color preferences
+      mood = null,
+      userColors = null,  // Array of color names OR full allowedColors object
     } = req.body
 
-    if (!query) {
-      return res.status(400).json({
-        success: false,
-        error: "Query is required",
-      })
-    }
-
-    console.log(`\n🔍 IMPROVED VECTOR SEARCH v3 (with Color):`)
-    console.log(`   Query: "${query}"`)
+    console.log(`\n🔍 VECTOR SEARCH V5 (AI Enhanced):`)
     console.log(`   Category: ${category}`)
     console.log(`   Occasion: ${occasion}`)
     if (style) console.log(`   Style: ${style}`)
-    if (userColors && userColors.length > 0) {
-      console.log(`   🎨 User Colors: ${userColors.join(', ')}`)
-    }
+    if (mood) console.log(`   Mood: ${mood}`)
     console.log(`   Limit: ${limit}`)
+    
+    let finalQuery = query
+    
+    // V5: If profile data provided, generate AI query
+    if (profile || (style && userColors)) {
+      console.log(`   🤖 AI Query Mode: Generating optimized query...`)
+      
+      // Extract color names for this category
+      let categoryColors = []
+      if (userColors) {
+        if (Array.isArray(userColors) && typeof userColors[0] === 'string') {
+          // Simple array of color names
+          categoryColors = userColors
+        } else if (userColors[category]) {
+          // Full allowedColors object with category keys
+          categoryColors = userColors[category].map(c => c.name || c).filter(Boolean)
+        } else if (userColors.top || userColors.tops) {
+          // Alternate key format
+          const catKey = category === 'tops' ? 'top' : category === 'bottoms' ? 'bottom' : category
+          categoryColors = (userColors[catKey] || []).map(c => c.name || c).filter(Boolean)
+        }
+      }
+      
+      if (categoryColors.length > 0) {
+        console.log(`   🎨 Category colors: ${categoryColors.slice(0, 4).join(', ')}`)
+      }
+      
+      // Get style rules
+      const styleKey = (style || "casual").toLowerCase()
+      const shoeRules = AI_STYLE_SHOE_RULES[styleKey] || AI_STYLE_SHOE_RULES.casual
+      const fabricRules = AI_STYLE_FABRIC_RULES[styleKey] || AI_STYLE_FABRIC_RULES.casual
+      
+      // Build AI-optimized query based on ASOS title pattern:
+      // "[fit] [fabric] [item] in [color]"
+      const primaryColor = categoryColors[0] || "black"
+      const secondaryColor = categoryColors[1] || primaryColor
+      
+      // Get occasion-specific product types
+      const occasionKey = (occasion || "everyday").toLowerCase()
+      const occasionConfig = OCCASION_PRODUCT_MAPPING[occasionKey] || OCCASION_PRODUCT_MAPPING.everyday
+      const productTypes = occasionConfig[category]?.slice(0, 3) || []
+      
+      // Get style adjectives
+      const styleConfig = STYLE_PRODUCT_MODIFIERS[styleKey] || STYLE_PRODUCT_MODIFIERS.casual
+      const styleAdj = styleConfig?.adjectives?.slice(0, 2) || ["comfortable"]
+      
+      // Get allowed fabrics
+      const allowedFabrics = fabricRules.allow.split(",").slice(0, 2).map(f => f.trim())
+      
+      // Build ASOS-style query
+      if (category === "shoes") {
+        const allowedShoes = shoeRules.allow.split(",").slice(0, 2).map(s => s.trim())
+        finalQuery = `${primaryColor} ${styleAdj[0]} ${allowedShoes.join(" ")} in ${primaryColor} ${secondaryColor} ${productTypes.join(" ")} ${primaryColor}`
+      } else {
+        finalQuery = `${primaryColor} ${styleAdj[0]} ${allowedFabrics[0]} ${productTypes[0] || category} in ${primaryColor} ${styleAdj.join(" ")} ${secondaryColor} ${productTypes.join(" ")} ${primaryColor}`
+      }
+      
+      console.log(`   📝 AI Query: "${finalQuery.substring(0, 80)}..."`)
+      
+      // Add weighted color injection (5x/3x/1x)
+      if (categoryColors.length > 0) {
+        const colorPrefix = categoryColors.slice(0, 3).join(" ")
+        const weighted = []
+        categoryColors.slice(0, 3).forEach((c, i) => {
+          const weight = [5, 3, 1][i] || 1
+          for (let j = 0; j < weight; j++) weighted.push(c)
+        })
+        finalQuery = `${colorPrefix} ${weighted.join(" ")} ${finalQuery} ${categoryColors.slice(0, 2).join(" ")}`
+        console.log(`   🎨 Color-enhanced query length: ${finalQuery.length} chars`)
+      }
+    }
+    
+    if (!finalQuery) {
+      return res.status(400).json({
+        success: false,
+        error: "Query or profile data is required",
+      })
+    }
 
-    // ✅ UPDATED: Pass user colors to semantic query builder
-    const semanticQuery = buildSemanticQuery(query, occasion, category, style, userColors)
+    // Build semantic query with occasion/style context
+    const semanticQuery = buildSemanticQuery(finalQuery, occasion, category, style, userColors)
     console.log(`   Semantic: "${semanticQuery.substring(0, 150)}..."`)
 
     console.log(`   🤖 Generating embedding...`)
@@ -1705,7 +2253,7 @@ app.post("/api/search", async (req, res) => {
       .withWhere(whereFilters)
       .withLimit(initialLimit)
       .withHybrid({
-        query: query,
+        query: semanticQuery,  // ✅ FIXED: Use semanticQuery, not null query
         alpha: 0.7,
       })
       .do()
@@ -1766,7 +2314,7 @@ app.post("/api/search", async (req, res) => {
         .withNearVector({ vector: embedding })
         .withWhere(whereFilters)
         .withLimit(initialLimit * 2) // Double the fetch limit
-        .withHybrid({ query: query, alpha: 0.7 })
+        .withHybrid({ query: semanticQuery, alpha: 0.7 })  // ✅ FIXED
         .do()
 
       products = retryResponse.data.Get.Product || []
@@ -1790,7 +2338,7 @@ app.post("/api/search", async (req, res) => {
           .withNearVector({ vector: embedding })
           .withWhere(whereFilters)
           .withLimit(initialLimit * 3)
-          .withHybrid({ query: query, alpha: 0.7 })
+          .withHybrid({ query: semanticQuery, alpha: 0.7 })  // ✅ FIXED
           .do()
 
         products = retry2Response.data.Get.Product || []
@@ -1809,7 +2357,7 @@ app.post("/api/search", async (req, res) => {
             .withNearVector({ vector: embedding })
             .withWhere(whereFilters)
             .withLimit(initialLimit * 4) // 4x the original limit
-            .withHybrid({ query: query, alpha: 0.7 })
+            .withHybrid({ query: semanticQuery, alpha: 0.7 })  // ✅ FIXED
             .do()
 
           products = retry3Response.data.Get.Product || []
@@ -2343,8 +2891,13 @@ app.post("/api/generate-embeddings", async (req, res) => {
             const heelType = extractCut(name, desc, category)
             const primaryOccasion = occasions[0] || 'everyday'
 
-            // ✅ CRITICAL FIX: Build RICH embedding text with subcategory emphasis
-            const embeddingText = `${name}. ${desc}. Main category: ${category}. ${subcategory ? `Product type: ${subcategory} ${category}.` : ''} Heel height: ${heelType}. Material: ${extractMaterials(product.materials || product.materials_description || desc)}. Neckline: ${extractNeckline(name, desc)}. Sleeve: ${extractSleeveType(name, desc)}. Pattern: ${extractPattern(name, desc)}. Fit: ${extractFit(name, desc)}. Cut: ${heelType}. Suitable for: ${occasions.join(", ")}. Formality: ${formalityLevel}. Occasion emphasis: ${occasionBoost[primaryOccasion]} ${primaryOccasion}. Heel type: ${heelType}`
+            // ✅ IMPROVED v3: Extract color and add to embedding (prefix + suffix)
+            const extractedColor = extractProductColor(name, desc)
+            const colorText = extractedColor?.normalized || ''
+            
+            // ✅ CRITICAL: Build embedding with COLOR PREFIX + SUFFIX for semantic matching
+            // Format: [color] [product details] [color] - double mention boosts color signal in vector space
+            const embeddingText = `${colorText} ${name}. ${desc}. Main category: ${category}. ${subcategory ? `Product type: ${subcategory} ${category}.` : ''} Color: ${colorText}. Heel height: ${heelType}. Material: ${extractMaterials(product.materials || product.materials_description || desc)}. Neckline: ${extractNeckline(name, desc)}. Sleeve: ${extractSleeveType(name, desc)}. Pattern: ${extractPattern(name, desc)}. Fit: ${extractFit(name, desc)}. Cut: ${heelType}. Suitable for: ${occasions.join(", ")}. Formality: ${formalityLevel}. Occasion emphasis: ${occasionBoost[primaryOccasion]} ${primaryOccasion}. Heel type: ${heelType}. ${colorText}`
 
             const embedding = await generateEmbedding(embeddingText)
 
@@ -2488,6 +3041,283 @@ app.post("/api/generate-embeddings", async (req, res) => {
 })
 
 // ============================================================================
+// AI QUERY GENERATION (V5)
+// ============================================================================
+
+// ASOS title examples for AI context
+const ASOS_TITLE_EXAMPLES = {
+  tops: [
+    "ASOS DESIGN oversized t-shirt in black",
+    "ASOS DESIGN slim fit shirt in white cotton",
+    "ASOS DESIGN relaxed fit knit sweater in cream",
+    "ASOS DESIGN wrap front blouse in red",
+    "ASOS DESIGN muscle fit polo in navy"
+  ],
+  bottoms: [
+    "ASOS DESIGN high waisted wide leg jeans in blue wash",
+    "ASOS DESIGN tailored trousers in black",
+    "ASOS DESIGN pleated midi skirt in cream",
+    "ASOS DESIGN slim fit chinos in khaki",
+    "ASOS DESIGN relaxed cargo pants in olive"
+  ],
+  shoes: [
+    "ASOS DESIGN chunky sole sneakers in white",
+    "ASOS DESIGN strappy heeled sandals in black",
+    "ASOS DESIGN leather loafers in tan",
+    "ASOS DESIGN pointed court shoes in nude",
+    "ASOS DESIGN ankle boots with block heel in black"
+  ]
+}
+
+// Style → shoe type mapping for AI enforcement
+const AI_STYLE_SHOE_RULES = {
+  casual: { allow: "sneaker, flat, loafer, sandal, slip-on, slipper", forbid: "heel, stiletto, pump" },
+  sporty: { allow: "sneaker, trainer, athletic, running", forbid: "heel, stiletto, pump, oxford, loafer" },
+  elegant: { allow: "heel, pump, stiletto, oxford, loafer", forbid: "sneaker, trainer, athletic, slipper" },
+  romantic: { allow: "heel, strappy sandal, ballet flat, kitten heel", forbid: "sneaker, combat boot, chunky, slipper" },
+  minimalist: { allow: "flat, loafer, sneaker, mule, slip-on, slipper", forbid: "embellished, sparkle, chunky platform" },
+  bohemian: { allow: "sandal, flat, espadrille, ankle boot", forbid: "stiletto, formal pump, athletic" },
+  edgy: { allow: "boot, combat, platform, chunky, ankle boot", forbid: "ballet, delicate, kitten heel, slipper" },
+  glamorous: { allow: "stiletto, platform, embellished, statement", forbid: "sneaker, athletic, loafer, slipper" },
+  classic: { allow: "pump, loafer, oxford, ballet flat", forbid: "athletic, flip flop, chunky sneaker, slipper" },
+  preppy: { allow: "loafer, oxford, ballet flat, boat shoe", forbid: "stiletto, platform, combat, slipper" },
+  nordic: { allow: "boot, loafer, flat, sneaker minimal, ankle boot, wool slipper", forbid: "stiletto, embellished, flashy platform" },
+  modern: { allow: "loafer, mule, flat, ankle boot, sleek sneaker", forbid: "chunky platform, overly embellished, flip flop" },
+  // HOME & COMFORT STYLES
+  home: { allow: "slipper, house shoe, slide, cozy slipper, indoor shoe", forbid: "heel, stiletto, formal, outdoor boot" },
+  lounge: { allow: "slipper, soft slide, cozy slipper, house shoe", forbid: "heel, formal, outdoor, athletic" },
+  cozy: { allow: "slipper, ugg, fuzzy slide, house shoe, soft boot", forbid: "heel, stiletto, formal pump" }
+}
+
+// ============================================================================
+// STYLE → FABRIC/MATERIAL RULES (V5.1)
+// Prevents casual styles from returning satin, silk, velvet, etc.
+// ============================================================================
+const AI_STYLE_FABRIC_RULES = {
+  casual: { 
+    allow: "cotton, jersey, denim, canvas, linen, fleece, knit, chambray, terry, twill",
+    forbid: "satin, silk, velvet, sequin, lace, chiffon, organza, brocade, taffeta, lamé, mesh evening"
+  },
+  sporty: { 
+    allow: "jersey, mesh, nylon, lycra, performance, technical, stretch, fleece, cotton",
+    forbid: "satin, silk, velvet, sequin, lace, chiffon, organza, leather, wool"
+  },
+  elegant: { 
+    allow: "satin, silk, velvet, chiffon, lace, crepe, wool, cashmere, tweed, organza",
+    forbid: "jersey, fleece, denim, canvas, nylon, athletic mesh"
+  },
+  romantic: { 
+    allow: "lace, chiffon, silk, organza, tulle, voile, satin, eyelet, broderie",
+    forbid: "denim, canvas, nylon, fleece, leather, athletic mesh"
+  },
+  minimalist: { 
+    allow: "cotton, linen, wool, cashmere, silk, jersey, crepe",
+    forbid: "sequin, glitter, embellished, brocade, lace, tulle, velvet"
+  },
+  bohemian: { 
+    allow: "cotton, linen, crochet, embroidered, fringe, suede, leather, gauze, cheesecloth",
+    forbid: "satin formal, sequin, nylon athletic, lycra"
+  },
+  edgy: { 
+    allow: "leather, denim, mesh, vinyl, studded, distressed, coated, patent",
+    forbid: "lace delicate, chiffon, tulle, pastel silk, eyelet"
+  },
+  glamorous: { 
+    allow: "sequin, satin, silk, velvet, metallic, lamé, beaded, crystal, sparkle",
+    forbid: "cotton casual, denim, fleece, jersey, canvas"
+  },
+  classic: { 
+    allow: "cotton, wool, cashmere, silk, linen, tweed, leather, suede",
+    forbid: "sequin, glitter, mesh athletic, nylon sporty"
+  },
+  preppy: { 
+    allow: "cotton, oxford cloth, cable knit, wool, seersucker, madras, piqué",
+    forbid: "sequin, glitter, mesh, vinyl, distressed, ripped"
+  },
+  nordic: { 
+    allow: "wool, cashmere, cotton, linen, knit, fleece, canvas",
+    forbid: "sequin, glitter, satin, velvet flashy, mesh"
+  },
+  modern: { 
+    allow: "cotton, wool, silk, leather, cashmere, crepe, structured fabrics",
+    forbid: "sequin, glitter, fringe, overly embellished"
+  },
+  // HOME & COMFORT STYLES
+  home: { 
+    allow: "cotton, fleece, jersey, soft knit, plush, terry, flannel, modal",
+    forbid: "silk formal, sequin, leather, structured, stiff fabrics"
+  },
+  lounge: { 
+    allow: "soft cotton, modal, jersey, cashmere, bamboo, fleece, brushed fabric",
+    forbid: "structured, formal, sequin, stiff, scratchy"
+  },
+  cozy: { 
+    allow: "fleece, sherpa, plush, soft knit, fuzzy, teddy, chenille, waffle knit",
+    forbid: "structured, formal, silk dressy, leather"
+  }
+}
+
+/**
+ * AI Query Generation Endpoint (V5)
+ * Uses OpenAI to generate ASOS-style search queries from quiz data
+ */
+app.post("/api/generate-ai-queries", async (req, res) => {
+  console.log("\n🤖 ========================================")
+  console.log("🤖 AI QUERY GENERATION - V5")
+  console.log("🤖 ========================================")
+  
+  try {
+    const { style, occasion, mood, colors, bodyType, priceRange } = req.body
+    
+    console.log(`   Style: ${style || 'not set'}`)
+    console.log(`   Occasion: ${occasion || 'not set'}`)
+    console.log(`   Mood: ${mood || 'not set'}`)
+    
+    // Extract color names for each category
+    const topColors = colors?.tops?.map(c => c.name).join(", ") || "black, white"
+    const bottomColors = colors?.bottoms?.map(c => c.name).join(", ") || "black, navy"
+    const shoeColors = colors?.shoes?.map(c => c.name).join(", ") || "black, tan"
+    
+    console.log(`   🎨 Top colors: ${topColors}`)
+    console.log(`   🎨 Bottom colors: ${bottomColors}`)
+    console.log(`   🎨 Shoe colors: ${shoeColors}`)
+    
+    // Get style-shoe and fabric rules
+    const styleKey = (style || "casual").toLowerCase()
+    const shoeRules = AI_STYLE_SHOE_RULES[styleKey] || AI_STYLE_SHOE_RULES.casual
+    const fabricRules = AI_STYLE_FABRIC_RULES[styleKey] || AI_STYLE_FABRIC_RULES.casual
+    
+    // Get style modifiers from existing config
+    const styleConfig = STYLE_PRODUCT_MODIFIERS[styleKey] || STYLE_PRODUCT_MODIFIERS.casual
+    const styleAdjectives = styleConfig?.adjectives?.slice(0, 5).join(", ") || "comfortable, relaxed"
+    
+    // Get occasion products from existing config
+    const occasionKey = (occasion || "everyday").toLowerCase()
+    const occasionConfig = OCCASION_PRODUCT_MAPPING[occasionKey] || OCCASION_PRODUCT_MAPPING.everyday
+    const occasionTops = occasionConfig.tops?.slice(0, 4).join(", ") || "top, shirt"
+    const occasionBottoms = occasionConfig.bottoms?.slice(0, 4).join(", ") || "pant, jean"
+    const occasionShoes = occasionConfig.shoes?.slice(0, 4).join(", ") || "shoe, sneaker"
+    
+    const batchPrompt = `You are a fashion search query specialist. Generate 3 search queries for finding products from an ASOS-style database.
+
+## USER PROFILE
+- Style: ${style || "casual"}
+- Occasion: ${occasion || "everyday"}  
+- Mood: ${mood || "general"}
+- Body Type: ${bodyType || "not specified"}
+- Budget: $${priceRange?.min || 0} - $${priceRange?.max || 200}
+
+## CATEGORY COLORS
+- Tops: ${topColors}
+- Bottoms: ${bottomColors}
+- Shoes: ${shoeColors}
+
+## ASOS TITLE PATTERN
+Products follow: "[Modifiers] [Core Item] in [Color]"
+Examples:
+${ASOS_TITLE_EXAMPLES.tops.slice(0, 2).join("\n")}
+${ASOS_TITLE_EXAMPLES.bottoms.slice(0, 2).join("\n")}
+${ASOS_TITLE_EXAMPLES.shoes.slice(0, 2).join("\n")}
+
+## STYLE GUIDANCE FOR "${style || "casual"}"
+Style adjectives: ${styleAdjectives}
+Occasion tops: ${occasionTops}
+Occasion bottoms: ${occasionBottoms}
+Occasion shoes: ${occasionShoes}
+
+## CRITICAL FABRIC/MATERIAL RULES FOR "${style || "casual"}" STYLE
+✅ PREFERRED FABRICS: ${fabricRules.allow}
+❌ FORBIDDEN FABRICS: ${fabricRules.forbid}
+
+## CRITICAL SHOE RULES FOR "${style || "casual"}" STYLE
+✅ ONLY USE: ${shoeRules.allow}
+❌ NEVER USE: ${shoeRules.forbid}
+
+## OUTPUT FORMAT (JSON)
+Return ONLY valid JSON:
+{
+  "tops": "query for tops here",
+  "bottoms": "query for bottoms here", 
+  "shoes": "query for shoes here"
+}
+
+Each query should:
+1. Mirror ASOS title structure ("[modifiers] [item] in [color]")
+2. Include primary color at START and END
+3. Be under 15 words
+4. Use style-appropriate modifiers: ${styleAdjectives}
+5. For tops/bottoms: Use ONLY fabrics from: ${fabricRules.allow.split(",").slice(0, 4).join(", ")}
+6. For tops/bottoms: NEVER include: ${fabricRules.forbid.split(",").slice(0, 4).join(", ")}
+7. Shoes query MUST use ONLY these types: ${shoeRules.allow}`
+
+    console.log(`   🤖 Calling OpenAI for query generation...`)
+    
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: "You output only valid JSON. No markdown, no explanation, no code blocks." },
+        { role: "user", content: batchPrompt }
+      ],
+      temperature: 0.3,
+      max_tokens: 300
+    })
+    
+    const content = completion.choices?.[0]?.message?.content?.trim() || "{}"
+    
+    // Clean up potential markdown formatting
+    const cleanContent = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim()
+    
+    console.log(`   📝 Raw AI response: ${cleanContent.substring(0, 150)}...`)
+    
+    try {
+      const queries = JSON.parse(cleanContent)
+      
+      // Validate we got all three
+      if (!queries.tops || !queries.bottoms || !queries.shoes) {
+        throw new Error("Missing category in AI response")
+      }
+      
+      console.log("\n🤖 AI Queries Generated:")
+      console.log(`   Tops: "${queries.tops}"`)
+      console.log(`   Bottoms: "${queries.bottoms}"`)
+      console.log(`   Shoes: "${queries.shoes}"`)
+      console.log("🤖 ========================================\n")
+      
+      res.json({
+        success: true,
+        queries: {
+          tops: queries.tops,
+          bottoms: queries.bottoms,
+          shoes: queries.shoes
+        }
+      })
+      
+    } catch (parseError) {
+      console.error("   ❌ JSON parse failed:", parseError.message)
+      console.log("   Raw content:", cleanContent.substring(0, 200))
+      
+      // Return fallback queries
+      res.json({
+        success: true,
+        queries: {
+          tops: `${topColors.split(",")[0]} ${styleAdjectives.split(",")[0]} top ${topColors.split(",")[0]}`,
+          bottoms: `${bottomColors.split(",")[0]} ${styleAdjectives.split(",")[0]} pant ${bottomColors.split(",")[0]}`,
+          shoes: `${shoeColors.split(",")[0]} ${shoeRules.allow.split(",")[0]} ${shoeColors.split(",")[0]}`
+        },
+        fallback: true
+      })
+    }
+    
+  } catch (error) {
+    console.error("❌ AI query generation error:", error)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+// ============================================================================
 
 // START SERVER
 
@@ -2495,7 +3325,7 @@ app.post("/api/generate-embeddings", async (req, res) => {
 
 app.listen(PORT, () => {
   console.log("\n========================================")
-  console.log("🚀 IMPROVED VECTOR SEARCH SERVER (v2)")
+  console.log("🚀 IMPROVED VECTOR SEARCH SERVER (v5 - AI Enhanced)")
   console.log("========================================")
   console.log(`📍 Running on: http://localhost:${PORT}`)
   console.log(`🔗 Weaviate: ${process.env.WEAVIATE_SCHEME}://${process.env.WEAVIATE_HOST}`)
@@ -2507,6 +3337,7 @@ app.listen(PORT, () => {
   console.log(`   GET  /api/count                  - Product count`)
   console.log(`   POST /api/search                 - Vector search (IMPROVED v2)`)
   console.log(`   POST /api/search-batch           - Batch search`)
+  console.log(`   POST /api/generate-ai-queries    - AI query generation (V5) ✨`)
   console.log(`   POST /api/generate-embeddings    - Generate & import embeddings (v2)`)
   console.log("\n✅ Server ready!\n")
 })
@@ -2666,30 +3497,30 @@ function calculateDiversityScore(products, userColors = null) {
   const scoredProducts = products.map((product, index) => {
     let diversityScore = 0
 
-    // Price diversity (25% weight - reduced from 35%)
+    // Price diversity (20% weight - reduced from 25%)
     const priceRange =
       product.price < 50 ? "budget" : product.price < 150 ? "mid" : product.price < 300 ? "premium" : "luxury"
     const rangeCount = priceRanges[priceRange].length
-    diversityScore += (1 / rangeCount) * 25
+    diversityScore += (1 / rangeCount) * 20
 
-    // Brand diversity (20% weight - reduced from 25%)
+    // Brand diversity (15% weight - reduced from 20%)
     const brand = product.brand || "unknown"
     const brandFrequency = brandCounts[brand] / products.length
-    diversityScore += (1 - brandFrequency) * 20
+    diversityScore += (1 - brandFrequency) * 15
 
-    // Name uniqueness (20% weight - reduced from 30%)
+    // Name uniqueness (15% weight - reduced from 20%)
     const baseName = (product.product_name || "").toLowerCase().split(" ").slice(0, 3).join(" ")
     const nameFrequency = nameCounts[baseName] / products.length
-    diversityScore += (1 - nameFrequency) * 20
+    diversityScore += (1 - nameFrequency) * 15
 
-    // ✅ NEW: Color matching score (25% weight)
+    // ✅ BOOSTED: Color matching score (35% weight - increased from 25%)
     const colorInfo = extractProductColor(product.product_name || '', product.description || '')
     const productBaseColor = colorInfo ? colorInfo.normalized : null
     
     if (hasUserColorPref && productBaseColor) {
       // Score based on user color preference match
       const colorMatchScore = scoreProductColorMatch(colorInfo, normalizedUserColors)
-      diversityScore += (colorMatchScore / 100) * 25
+      diversityScore += (colorMatchScore / 100) * 35
       
       // Store color info for debugging
       product._colorMatch = {
@@ -2700,7 +3531,7 @@ function calculateDiversityScore(products, userColors = null) {
     } else if (productBaseColor) {
       // No user preference - score for color variety
       const colorFrequency = colorCounts[productBaseColor] / products.length
-      diversityScore += (1 - colorFrequency) * 15 // Lower weight for variety alone
+      diversityScore += (1 - colorFrequency) * 20 // Higher weight for variety when no preference
     } else {
       // No color detected - neutral score
       diversityScore += 10
@@ -2829,4 +3660,201 @@ function calculateSmartBudget(totalMin, totalMax, category, occasion) {
     upFlexPercent: upFlex === 999 ? "unlimited" : Math.round(upFlex * 100),
     isUnlimited: upFlex === 999,
   }
+}
+
+// ============================================================================
+// QUALITY CHECKER COLOR SCORING API
+// ============================================================================
+
+/**
+ * ✅ NEW: Score outfit color match for quality checker
+ * Call this endpoint to get programmatic color scores for outfits
+ */
+app.post("/api/score-outfit-colors", async (req, res) => {
+  try {
+    const { outfit, userColors } = req.body
+    
+    if (!outfit || !userColors || userColors.length === 0) {
+      return res.json({ colorScore: 50, details: "No colors to score" })
+    }
+    
+    console.log(`🎨 Quality Checker Color Scoring:`)
+    console.log(`   User colors: ${userColors.join(', ')}`)
+    
+    // Normalize user colors
+    const normalizedUserColors = userColors.map(c => 
+      COLOR_NORMALIZATION_MAP[c.toLowerCase()] || c.toLowerCase()
+    )
+    
+    // Extract colors from each outfit piece
+    const pieces = [
+      { type: 'top', name: outfit.top?.product_name || outfit.topName || '' },
+      { type: 'bottom', name: outfit.bottom?.product_name || outfit.bottomName || '' },
+      { type: 'shoes', name: outfit.shoes?.product_name || outfit.shoeName || '' }
+    ]
+    
+    let totalScore = 0
+    let matchedPieces = 0
+    let harmonyBonus = 0
+    const pieceColors = []
+    
+    pieces.forEach(piece => {
+      const colorInfo = extractProductColor(piece.name, '')
+      if (colorInfo) {
+        pieceColors.push({
+          type: piece.type,
+          original: colorInfo.original,
+          normalized: colorInfo.normalized
+        })
+        
+        // Direct match score (40 points max per piece)
+        if (normalizedUserColors.includes(colorInfo.normalized)) {
+          totalScore += 40
+          matchedPieces++
+          console.log(`   ✅ ${piece.type}: "${colorInfo.original}" → ${colorInfo.normalized} (MATCHES USER PREF)`)
+        } else {
+          // Partial score for harmonious colors
+          const harmonyScore = checkColorHarmony(colorInfo.normalized, normalizedUserColors)
+          totalScore += harmonyScore * 20 // Up to 20 points for harmony
+          console.log(`   🎯 ${piece.type}: "${colorInfo.original}" → ${colorInfo.normalized} (harmony: ${harmonyScore})`)
+        }
+      } else {
+        // Neutral/unknown color - small penalty
+        console.log(`   ⚪ ${piece.type}: no color detected`)
+        totalScore += 10
+      }
+    })
+    
+    // Outfit harmony bonus (colors work well together)
+    if (pieceColors.length >= 2) {
+      const outfitHarmony = calculateOutfitHarmony(pieceColors)
+      harmonyBonus = outfitHarmony * 15 // Up to 15 bonus points
+      totalScore += harmonyBonus
+    }
+    
+    // Normalize to 0-100 scale
+    // Max possible: 3 pieces * 40 + 15 harmony = 135, so scale accordingly
+    const normalizedScore = Math.min(100, Math.round((totalScore / 135) * 100))
+    
+    // Apply floor based on match count
+    let finalScore = normalizedScore
+    if (matchedPieces >= 2) finalScore = Math.max(70, normalizedScore)
+    else if (matchedPieces === 1) finalScore = Math.max(55, normalizedScore)
+    else finalScore = Math.max(40, normalizedScore)
+    
+    console.log(`   📊 Color Score: ${finalScore} (${matchedPieces}/3 pieces match user colors)`)
+    
+    res.json({
+      colorScore: finalScore,
+      matchedPieces,
+      pieceColors,
+      harmonyBonus: Math.round(harmonyBonus),
+      details: `${matchedPieces}/3 pieces match user colors (${userColors.join(', ')})`
+    })
+    
+  } catch (error) {
+    console.error("Color scoring error:", error)
+    res.json({ colorScore: 50, error: error.message })
+  }
+})
+
+/**
+ * ✅ Check if a color is harmonious with user preferences
+ * Returns 0-1 score
+ */
+function checkColorHarmony(productColor, userColors) {
+  if (!productColor || userColors.length === 0) return 0
+  
+  // Check if it's a neutral (always harmonious)
+  if (COLOR_HARMONY.neutrals.includes(productColor)) {
+    return 0.7 // Neutrals are always acceptable
+  }
+  
+  for (const userColor of userColors) {
+    // Check complementary
+    if (COLOR_HARMONY.complementary[userColor]?.includes(productColor)) {
+      return 1.0
+    }
+    // Check analogous
+    if (COLOR_HARMONY.analogous[userColor]?.includes(productColor)) {
+      return 0.8
+    }
+    // Check triadic
+    if (COLOR_HARMONY.triadic[userColor]?.includes(productColor)) {
+      return 0.6
+    }
+  }
+  
+  // Check temperature match
+  const productTemp = getColorTemperature(productColor)
+  const userTemps = userColors.map(getColorTemperature)
+  if (userTemps.includes(productTemp)) {
+    return 0.4 // Same temperature family
+  }
+  
+  return 0.2 // No harmony match
+}
+
+/**
+ * ✅ Get color temperature (warm/cool/neutral)
+ */
+
+
+/**
+ * ✅ Calculate how well outfit pieces harmonize with each other
+ * Returns 0-1 score
+ */
+function calculateOutfitHarmony(pieceColors) {
+  if (pieceColors.length < 2) return 0.5
+  
+  const colors = pieceColors.map(p => p.normalized).filter(Boolean)
+  if (colors.length < 2) return 0.5
+  
+  let harmonyScore = 0
+  let comparisons = 0
+  
+  for (let i = 0; i < colors.length; i++) {
+    for (let j = i + 1; j < colors.length; j++) {
+      comparisons++
+      const c1 = colors[i]
+      const c2 = colors[j]
+      
+      // Same color family
+      if (c1 === c2) {
+        harmonyScore += 0.8
+        continue
+      }
+      
+      // One is neutral
+      if (COLOR_HARMONY.neutrals.includes(c1) || COLOR_HARMONY.neutrals.includes(c2)) {
+        harmonyScore += 0.9
+        continue
+      }
+      
+      // Complementary
+      if (COLOR_HARMONY.complementary[c1]?.includes(c2) || 
+          COLOR_HARMONY.complementary[c2]?.includes(c1)) {
+        harmonyScore += 1.0
+        continue
+      }
+      
+      // Analogous
+      if (COLOR_HARMONY.analogous[c1]?.includes(c2) || 
+          COLOR_HARMONY.analogous[c2]?.includes(c1)) {
+        harmonyScore += 0.85
+        continue
+      }
+      
+      // Same temperature
+      if (getColorTemperature(c1) === getColorTemperature(c2)) {
+        harmonyScore += 0.6
+        continue
+      }
+      
+      // Clashing (different temps, not complementary)
+      harmonyScore += 0.3
+    }
+  }
+  
+  return comparisons > 0 ? harmonyScore / comparisons : 0.5
 }
