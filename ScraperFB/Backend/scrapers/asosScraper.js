@@ -1232,7 +1232,7 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
     };
 
       const { data: existingProduct } = await supabase
-        .from('zara_cloth_scraper')
+        .from('clean_scraper')
         .select('product_id, price, availability')
         .eq('product_id', insertData.product_id)
         .single();
@@ -1240,7 +1240,7 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
       const isUpdate = !!existingProduct;
       
       const { error } = await supabase
-        .from('zara_cloth_scraper')
+        .from('clean_scraper')
         .upsert(insertData, { 
           onConflict: 'product_id',
           ignoreDuplicates: false 
