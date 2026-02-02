@@ -213,7 +213,7 @@ const BREADCRUMB_TO_OUTFIT_CATEGORY = {
   "women>shoes>wide-fit-shoes": "shoes"
 };
 
-// Get outfit_category from breadcrumb (HARDCODED MAPPING)
+// Get outfit_category from breadcrumb
 export function getOutfitCategoryFromBreadcrumb(breadcrumb) {
   if (!breadcrumb) return null;
   
