@@ -7,7 +7,17 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// ASOS Global Women's Category Taxonomy with outfit_category and category_name
+// ASOS Category Structure
+/**
+ * ASOS Global Women's Category Taxonomy (2025/2026)
+ * Verified against real-world CIDs and breadcrumb paths.
+ */
+
+/**
+ * ASOS Global Women's Category Taxonomy (2025/2026)
+ * Verified against real-world CIDs and URL structures.
+ */
+
 const ASOS_CATEGORIES = {
   women: {
     name: "Women",
@@ -17,177 +27,145 @@ const ASOS_CATEGORIES = {
         name: "Clothing",
         url: "/women/ctas/clothing/cat/?cid=3934",
         subcategories: {
-          "tops": {
-            outfit_category: "tops",
-            category_name: "women>clothing>tops",
+          tops: {
             name: "Tops",
             url: "/women/tops/cat/?cid=4169",
             subcategories: {
-              "t-shirts": { outfit_category: "tops", category_name: "women>clothing>tops>t-shirts", name: "T-Shirts & Vests", url: "/women/tops/t-shirts-vests/cat/?cid=4718" },
-              "shirts": { outfit_category: "tops", category_name: "women>clothing>tops>shirts", name: "Shirts", url: "/women/shirts/cat/?cid=15200" },
-              "blouses": { outfit_category: "tops", category_name: "women>clothing>tops>blouses", name: "Blouses", url: "/women/blouses/cat/?cid=15199" },
-              "crop-tops": { outfit_category: "tops", category_name: "women>clothing>tops>crop-tops", name: "Crop Tops", url: "/women/top/cat/?cid=15196" },
-              "bodysuits": { outfit_category: "tops", category_name: "women>clothing>tops>bodysuits", name: "Bodysuits", url: "/women/top/bodysuits/cat/?cid=11323" },
-              "printed-graphic-t-shirts": { outfit_category: "tops", category_name: "women>clothing>tops>printed-graphic-t-shirts", name: "Printed & Graphic T-Shirts", url: "/women/tops/printed-graphic-t-shirts/cat/?cid=19825" },
-              "crochet-tops": { outfit_category: "tops", category_name: "women>clothing>tops>crochet-tops", name: "Crochet Tops", url: "/women/tops/crochet-tops/cat/?cid=51078" },
-              "evening-tops": { outfit_category: "tops", category_name: "women>clothing>tops>evening-tops", name: "Evening Tops", url: "/women/tops/evening-tops/cat/?cid=11320" },
-              "party-tops": { outfit_category: "tops", category_name: "women>clothing>tops>party-tops", name: "Party Tops", url: "/women/tops/party-tops/cat/?cid=51447" },
-              "long-sleeve-tops": { outfit_category: "tops", category_name: "women>clothing>tops>long-sleeve-tops", name: "Long Sleeve Tops", url: "/women/tops/long-sleeve-tops/cat/?cid=17334" },
-              "corset-tops": { outfit_category: "tops", category_name: "women>clothing>tops>corset-tops", name: "Corset Tops", url: "/women/tops/corset-tops/cat/?cid=50070" },
-              "camis": { outfit_category: "tops", category_name: "women>clothing>tops>camis", name: "Camis", url: "/women/tops/camis/cat/?cid=15202" },
-              "tie-front-tops": { outfit_category: "tops", category_name: "women>clothing>tops>tie-front-tops", name: "Tie Front Tops", url: "/women/tops/tie-front-tops/cat/?cid=51707" }
+              "t-shirts-&-vests": { name: "T-Shirts & Vests", url: "/women/tops/t-shirts-vests/cat/?cid=4718" },
+              "shirts": { name: "Shirts", url: "/women/shirts/cat/?cid=15200" },
+              "blouses": { name: "Blouses", url: "/women/blouses/cat/?cid=15199" },
+              "crop-tops": { name: "Crop Tops", url: "/women/top/cat/?cid=15196" },
+              "bodysuits": { name: "Bodysuits", url: "/women/top/bodysuits/cat/?cid=11323" },
+              "graphic-tees": { name: "Printed & Graphic T-Shirts", url: "/women/tops/printed-graphic-t-shirts/cat/?cid=19825" },
+              "crochet-tops": { name: "Crochet Tops", url: "/women/tops/crochet-tops/cat/?cid=51078" },
+              "evening-tops": { name: "Evening Tops", url: "/women/tops/evening-tops/cat/?cid=11320" },
+              "party-tops": { name: "Party Tops", url: "/women/tops/party-tops/cat/?cid=51447" },
+              "camis": { name: "Camis", url: "/women/tops/camis/cat/?cid=15202" },
+              "long-sleeve-tops": { name: "Long Sleeve Tops", url: "/women/tops/long-sleeve-tops/cat/?cid=17334" },
+              "corset-tops": { name: "Corset Tops", url: "/women/tops/corset-tops/cat/?cid=50070" },
+              "tie-front-tops": { name: "Tie Front Tops", url: "/women/tops/tie-front-tops/cat/?cid=51707" }
             }
           },
-          "jumpers-and-cardigans": {
-            outfit_category: "tops",
-            category_name: "women>clothing>jumpers-and-cardigans",
+          "jumpers-&-cardigans": {
             name: "Jumpers & Cardigans",
             url: "/women/sweaters-cardigans/cat/?cid=2637",
             subcategories: {
-              "cardigans": { outfit_category: "tops", category_name: "women>clothing>jumpers-and-cardigans>cardigans", name: "Cardigans", url: "/women/jumpers-cardigans/cardigans/cat/?cid=15161" },
-              "cropped-cardigans": { outfit_category: "tops", category_name: "women>clothing>jumpers-and-cardigans>cropped-cardigans", name: "Cropped Cardigans", url: "/women/sweaters-cardigans/cropped-cardigans/cat/?cid=51018" },
-              "patterned-cardigans": { outfit_category: "tops", category_name: "women>clothing>jumpers-and-cardigans>patterned-cardigans", name: "Patterned Cardigans", url: "/women/sweaters-cardigans/patterned-cardigans/cat/?cid=51028" },
-              "sweaters": { outfit_category: "tops", category_name: "women>clothing>jumpers-and-cardigans>sweaters", name: "Sweaters", url: "/women/sweaters-cardigans/sweaters/cat/?cid=15160" },
-              "oversized-sweaters": { outfit_category: "tops", category_name: "women>clothing>jumpers-and-cardigans>oversized-sweaters", name: "Oversized Sweaters", url: "/women/sweaters-cardigans/oversized-sweaters/cat/?cid=51027" },
-              "sweater-vests": { outfit_category: "tops", category_name: "women>clothing>jumpers-and-cardigans>sweater-vests", name: "Sweater Vests", url: "/women/jumpers-cardigans/sweater-vests/cat/?cid=50415" },
-              "cropped-sweaters": { outfit_category: "tops", category_name: "women>clothing>jumpers-and-cardigans>cropped-sweaters", name: "Cropped Sweaters", url: "/women/sweaters-cardigans/cropped-sweaters/cat/?cid=51025" }
+              "cardigans": { name: "Cardigans", url: "/women/jumpers-cardigans/cardigans/cat/?cid=15161" },
+              "cropped-cardigans": { name: "Cropped Cardigans", url: "/women/sweaters-cardigans/cropped-cardigans/cat/?cid=51018" },
+              "patterned-cardigans": { name: "Patterned Cardigans", url: "/women/sweaters-cardigans/patterned-cardigans/cat/?cid=51028" },
+              "sweaters": { name: "Sweaters", url: "/women/sweaters-cardigans/sweaters/cat/?cid=15160" },
+              "oversized-sweaters": { name: "Oversized Sweaters", url: "/women/sweaters-cardigans/oversized-sweaters/cat/?cid=51027" },
+              "sweater-vests": { name: "Sweater Vests", url: "/women/jumpers-cardigans/sweater-vests/cat/?cid=50415" },
+              "cropped-sweaters": { name: "Cropped Sweaters", url: "/women/sweaters-cardigans/cropped-sweaters/cat/?cid=51025" }
             }
           },
-          "bottoms": {
-            outfit_category: "bottoms",
-            category_name: "women>clothing>bottoms",
+          bottoms: {
             name: "Bottoms",
             url: "/women/trousers-leggings/cat/?cid=2640",
             subcategories: {
-              "jeans": { outfit_category: "bottoms", category_name: "women>clothing>bottoms>jeans", name: "Jeans", url: "/women/jeans/cat/?cid=3630" },
-              "trousers": { outfit_category: "bottoms", category_name: "women>clothing>bottoms>trousers", name: "Pants & Trousers", url: "/women/trousers-leggings/cat/?cid=2640" },
-              "wide-leg-trousers": { outfit_category: "bottoms", category_name: "women>clothing>bottoms>wide-leg-trousers", name: "Wide Leg Trousers", url: "/women/trousers-leggings/wide-leg-trousers/cat/?cid=17400" },
-              "cargo-trousers": { outfit_category: "bottoms", category_name: "women>clothing>bottoms>cargo-trousers", name: "Cargo Trousers", url: "/women/trousers-leggings/cargo-trousers/cat/?cid=50458" },
-              "work-trousers": { outfit_category: "bottoms", category_name: "women>clothing>bottoms>work-trousers", name: "Work Trousers", url: "/women/trousers-leggings/work-trousers/cat/?cid=15203" },
-              "leggings": { outfit_category: "bottoms", category_name: "women>clothing>bottoms>leggings", name: "Leggings", url: "/women/trousers-leggings/leggings/cat/?cid=16037" },
-              "skirts": { outfit_category: "bottoms", category_name: "women>clothing>bottoms>skirts", name: "Skirts", url: "/women/skirts/cat/?cid=2639" },
-              "shorts": { outfit_category: "bottoms", category_name: "women>clothing>bottoms>shorts", name: "Shorts", url: "/women/shorts/cat/?cid=9263" }
+              "jeans": { name: "Jeans", url: "/women/jeans/cat/?cid=3630" },
+              "trousers": { name: "Pants & Trousers", url: "/women/trousers-leggings/cat/?cid=2640" },
+              "wide-leg-trousers": { name: "Wide Leg Trousers", url: "/women/trousers-leggings/wide-leg-trousers/cat/?cid=17400" },
+              "cargo-trousers": { name: "Cargo Trousers", url: "/women/trousers-leggings/cargo-trousers/cat/?cid=50458" },
+              "work-trousers": { name: "Work Trousers", url: "/women/trousers-leggings/work-trousers/cat/?cid=15203" },
+              "leggings": { name: "Leggings", url: "/women/trousers-leggings/leggings/cat/?cid=16037" },
+              "skirts": { name: "Skirts", url: "/women/skirts/cat/?cid=2639" },
+              "shorts": { name: "Shorts", url: "/women/shorts/cat/?cid=9263" }
             }
           },
-          "dresses": {
-            outfit_category: "bottoms",
-            category_name: "women>clothing>dresses",
-            name: "Dresses",
+          "one-piece": {
+            name: "One-Piece Outfits",
             url: "/women/dresses/cat/?cid=8799",
             subcategories: {
-              "day-dresses": { outfit_category: "bottoms", category_name: "women>clothing>dresses>day-dresses", name: "Day Dresses", url: "/women/dresses/day-dresses/cat/?cid=19680" },
-              "casual-dresses": { outfit_category: "bottoms", category_name: "women>clothing>dresses>casual-dresses", name: "Casual Dresses", url: "/women/dresses/casual-dresses/cat/?cid=8834" },
-              "wedding-guest": { outfit_category: "bottoms", category_name: "women>clothing>dresses>wedding-guest", name: "Wedding Guest Dresses", url: "/women/dresses/wedding-guest-dresses/cat/?cid=13934" },
-              "bridesmaid-dresses": { outfit_category: "bottoms", category_name: "women>clothing>dresses>bridesmaid-dresses", name: "Bridesmaid Dresses", url: "/women/dresses/bridesmaid-dresses/cat/?cid=15156" },
-              "evening-dresses": { outfit_category: "bottoms", category_name: "women>clothing>dresses>evening-dresses", name: "Evening Dresses", url: "/women/dresses/evening-dresses/cat/?cid=84" },
-              "party-dresses": { outfit_category: "bottoms", category_name: "women>clothing>dresses>party-dresses", name: "Party Dresses", url: "/women/dresses/party-dresses/cat/?cid=82" },
-              "mini-dresses": { outfit_category: "bottoms", category_name: "women>clothing>dresses>mini-dresses", name: "Mini Dresses", url: "/women/dresses/mini-dresses/cat/?cid=92" },
-              "midi-dresses": { outfit_category: "bottoms", category_name: "women>clothing>dresses>midi-dresses", name: "Midi Dresses", url: "/women/dresses/midi-dresses/cat/?cid=91" },
-              "maxi-dresses": { outfit_category: "bottoms", category_name: "women>clothing>dresses>maxi-dresses", name: "Maxi Dresses", url: "/women/dresses/maxi-dresses/cat/?cid=90" },
-              "sweater-dresses": { outfit_category: "bottoms", category_name: "women>clothing>dresses>sweater-dresses", name: "Sweater Dresses", url: "/women/dresses/sweater-dresses/cat/?cid=73" }
+              "day-dresses": { name: "Day Dresses", url: "/women/dresses/day-dresses/cat/?cid=19680" },
+              "casual-dresses": { name: "Casual Dresses", url: "/women/dresses/casual-dresses/cat/?cid=8834" },
+              "wedding-guest": { name: "Wedding Guest Dresses", url: "/women/dresses/wedding-guest-dresses/cat/?cid=13934" },
+              "bridesmaid-dresses": { name: "Bridesmaid Dresses", url: "/women/dresses/bridesmaid-dresses/cat/?cid=15156" },
+              "evening-dresses": { name: "Evening Dresses", url: "/women/dresses/evening-dresses/cat/?cid=84" },
+              "party-dresses": { name: "Party Dresses", url: "/women/dresses/party-dresses/cat/?cid=11057" },
+              "mini-dresses": { name: "Mini Dresses", url: "/women/dresses/mini-dresses/cat/?cid=92" },
+              "midi-dresses": { name: "Midi Dresses", url: "/women/dresses/midi-dresses/cat/?cid=91" },
+              "maxi-dresses": { name: "Maxi Dresses", url: "/women/dresses/maxi-dresses/cat/?cid=90" },
+              "sweater-dresses": { name: "Sweater Dresses", url: "/women/dresses/sweater-dresses/cat/?cid=73" },
+              "jumpsuits-&-playsuits": { name: "Jumpsuits & Playsuits", url: "/women/jumpsuits-playsuits/cat/?cid=7636" }
             }
           }
         }
       },
-      "shoes": {
-        outfit_category: "shoes",
-        category_name: "women>shoes",
+      shoes: {
         name: "Shoes",
         url: "/women/shoes/cat/?cid=4172",
         subcategories: {
-          "sneakers": { outfit_category: "shoes", category_name: "women>shoes>sneakers", name: "Sneakers", url: "/women/shoes/sneakers/cat/?cid=6456" },
-          "heels": { outfit_category: "shoes", category_name: "women>shoes>heels", name: "Heels", url: "/women/shoes/heels/cat/?cid=6461" },
-          "sandals": { outfit_category: "shoes", category_name: "women>shoes>sandals", name: "Sandals", url: "/women/shoes/sandals/cat/?cid=6458" },
-          "boots": { outfit_category: "shoes", category_name: "women>shoes>boots", name: "Boots", url: "/women/shoes/boots/cat/?cid=6455" },
-          "flat-shoes": { outfit_category: "shoes", category_name: "women>shoes>flat-shoes", name: "Flat Shoes", url: "/women/shoes/flat-shoes/cat/?cid=6459" },
-          "loafers": { outfit_category: "shoes", category_name: "women>shoes>loafers", name: "Loafers", url: "/women/shoes/loafers/cat/?cid=13692" },
-          "wide-fit-shoes": { outfit_category: "shoes", category_name: "women>shoes>wide-fit-shoes", name: "Wide Fit Shoes", url: "/women/shoes/wide-fit-shoes/cat/?cid=19886" },
-          "ballet-pumps": { outfit_category: "shoes", category_name: "women>shoes>ballet-pumps", name: "Ballet Pumps", url: "/women/shoes/ballet-pumps/cat/?cid=13685" },
-          "kitten-heels": { outfit_category: "shoes", category_name: "women>shoes>kitten-heels", name: "Kitten Heels", url: "/women/shoes/kitten-heels/cat/?cid=52305" },
-          "mules": { outfit_category: "shoes", category_name: "women>shoes>mules", name: "Mules", url: "/women/shoes/mules/cat/?cid=50073" },
-          "platform-shoes": { outfit_category: "shoes", category_name: "women>shoes>platform-shoes", name: "Platform Shoes", url: "/women/shoes/platform-shoes/cat/?cid=14208" },
-          "party-shoes": { outfit_category: "shoes", category_name: "women>shoes>party-shoes", name: "Party Shoes", url: "/women/shoes/party-shoes/cat/?cid=14466" },
-          "wedges": { outfit_category: "shoes", category_name: "women>shoes>wedges", name: "Wedges", url: "/women/shoes/sandals/wedges/cat/?cid=10266" }
+          "sneakers": { name: "Sneakers", url: "/women/shoes/sneakers/cat/?cid=6456" },
+          "heels": { name: "Heels", url: "/women/shoes/heels/cat/?cid=6461" },
+          "sandals": { name: "Sandals", url: "/women/shoes/sandals/cat/?cid=6458" },
+          "boots": { name: "Boots", url: "/women/shoes/boots/cat/?cid=6455" },
+          "flat-shoes": { name: "Flat Shoes", url: "/women/shoes/flat-shoes/cat/?cid=6459" },
+          "loafers": { name: "Loafers", url: "/women/shoes/loafers/cat/?cid=13692" },
+          "ballet-pumps": { name: "Ballet Pumps", url: "/women/shoes/ballet-pumps/cat/?cid=13685" },
+          "kitten-heels": { name: "Kitten Heels", url: "/women/shoes/kitten-heels/cat/?cid=52305" },
+          "mules": { name: "Mules", url: "/women/shoes/mules/cat/?cid=50073" },
+          "platform-shoes": { name: "Platform Shoes", url: "/women/shoes/platform-shoes/cat/?cid=14208" },
+          "party-shoes": { name: "Party Shoes", url: "/women/shoes/party-shoes/cat/?cid=14466" },
+          "wedges": { name: "Wedges", url: "/women/shoes/sandals/wedges/cat/?cid=10266" },
+          "wide-fit-shoes": { name: "Wide Fit Shoes", url: "/women/shoes/wide-fit-shoes/cat/?cid=19886" }
         }
       },
-      "workout": {
-        outfit_category: "tops",
-        category_name: "women>workout",
-        name: "Workout",
+      activewear: {
+        name: "Activewear",
         url: "/women/activewear/cat/?cid=26091",
         subcategories: {
-          "active-leggings": { outfit_category: "bottoms", category_name: "women>workout>active-leggings", name: "Active Leggings", url: "/women/activewear/leggings/cat/?cid=27163" },
-          "active-tops": { outfit_category: "tops", category_name: "women>workout>active-tops", name: "Active Tops", url: "/women/activewear/tops/cat/?cid=27167" },
-          "sports-bras": { outfit_category: "tops", category_name: "women>workout>sports-bras", name: "Sports Bras", url: "/women/activewear/sports-bras/cat/?cid=27168" },
-          "active-shorts": { outfit_category: "bottoms", category_name: "women>workout>active-shorts", name: "Active Shorts", url: "/women/activewear/shorts/cat/?cid=27164" },
-          "gym-training": { outfit_category: "tops", category_name: "women>workout>gym-training", name: "Gym & Training", url: "/women/activewear/gym-training/cat/?cid=27171" }
+          "active-leggings": { name: "Active Leggings", url: "/women/activewear/leggings/cat/?cid=27163" },
+          "active-tops": { name: "Active Tops", url: "/women/activewear/tops/cat/?cid=27167" },
+          "sports-bras": { name: "Sports Bras", url: "/women/activewear/sports-bras/cat/?cid=27168" },
+          "active-shorts": { name: "Active Shorts", url: "/women/activewear/shorts/cat/?cid=27164" },
+          "gym-&-training": { name: "Gym & Training", url: "/women/activewear/gym-training/cat/?cid=27171" }
         }
       }
     }
-  },
-  workout: {
-    outfit_category: "tops",
-    category_name: "workout",
-    name: "Workout",
-    url: "/search/?q=workout&refine=floor:1000,2001"
-  },
-  legging: {
-    outfit_category: "bottoms",
-    category_name: "legging",
-    name: "Legging",
-    url: "/search/?q=workout&currentpricerange=5-380&refine=attribute_1047:8385|floor:1000"
   }
 };
 
+// Export categories and functions
+export { ASOS_CATEGORIES };
 
-// Function to get outfit_category from scraped category_name
+// TRULY HARDCODED URL-TO-OUTFIT_CATEGORY MAP - NO KEYWORDS, JUST EXACT URL MATCHING
+
+
+/**
+ * Normalized Mapping Function
+ * Corrects errors where full-body garments were paired as bottoms.
+ */
 function getOutfitCategoryFromScrapedName(scrapedCategoryName) {
-  // Convert scraped format "Women > Clothing > Tops > T-Shirts & Vests" to lookup format
   const normalized = scrapedCategoryName
-    .split(" > ")
-    .map(part => part.toLowerCase().replace(/&/g, "-").replace(/\s+/g, "-"))
-    .join(">");
+  .split(" > ")
+  .map(part => part.toLowerCase().trim().replace(/\s+/g, "-"))
+  .join(">");
   
-  // Hardcoded mapping lookup table with all variations
   const categoryMapping = {
-    // TOPS
+    // TOPS (Torso-only and outerwear)
     "women>clothing>tops": "tops",
-    "women>clothing>tops>t-shirts": "tops",
-    "women>clothing>tops>t-shirts--vests": "tops",
+    "women>clothing>tops>t-shirts-&-vests": "tops",
     "women>clothing>tops>shirts": "tops",
     "women>clothing>tops>blouses": "tops",
     "women>clothing>tops>crop-tops": "tops",
     "women>clothing>tops>bodysuits": "tops",
-    "women>clothing>tops>printed--graphic-t-shirts": "tops",
-    "women>clothing>tops>crochet-tops": "tops",
+    "women>clothing>tops>graphic-tees": "tops",
     "women>clothing>tops>evening-tops": "tops",
     "women>clothing>tops>party-tops": "tops",
     "women>clothing>tops>long-sleeve-tops": "tops",
     "women>clothing>tops>corset-tops": "tops",
-    "women>clothing>tops>camis": "tops",
-    "women>clothing>tops>tie-front-tops": "tops",
-    "women>clothing>jumpers--cardigans": "tops",
-    "women>clothing>jumpers-and-cardigans": "tops",
-    "women>clothing>jumpers--cardigans>cardigans": "tops",
-    "women>clothing>jumpers-and-cardigans>cardigans": "tops",
-    "women>clothing>jumpers--cardigans>cropped-cardigans": "tops",
-    "women>clothing>jumpers-and-cardigans>cropped-cardigans": "tops",
-    "women>clothing>jumpers--cardigans>patterned-cardigans": "tops",
-    "women>clothing>jumpers-and-cardigans>patterned-cardigans": "tops",
-    "women>clothing>jumpers--cardigans>sweaters": "tops",
-    "women>clothing>jumpers-and-cardigans>sweaters": "tops",
-    "women>clothing>jumpers--cardigans>oversized-sweaters": "tops",
-    "women>clothing>jumpers-and-cardigans>oversized-sweaters": "tops",
-    "women>clothing>jumpers--cardigans>sweater-vests": "tops",
-    "women>clothing>jumpers-and-cardigans>sweater-vests": "tops",
-    "women>clothing>jumpers--cardigans>cropped-sweaters": "tops",
-    "women>clothing>jumpers-and-cardigans>cropped-sweaters": "tops",
-    "women>workout>active-tops": "tops",
-    "women>workout>sports-bras": "tops",
-    "women>workout>gym--training": "tops",
-    "women>workout>gym-training": "tops",
-    
-    // BOTTOMS - Only actual bottoms (no dresses)
+    "women>clothing>jumpers-&-cardigans": "tops",
+    "women>clothing>jumpers-&-cardigans>cardigans": "tops",
+    "women>clothing>jumpers-&-cardigans>cropped-cardigans": "tops",
+    "women>clothing>jumpers-&-cardigans>sweaters": "tops",
+    "women>clothing>jumpers-&-cardigans>cropped-sweaters": "tops",
+    "women>activewear>tops": "tops",
+    "women>activewear>active-tops": "tops",
+    "women>activewear>sports-bras": "tops",
+    "women>activewear>gym-&-training": "tops",
+
+    // BOTTOMS (Waist-down only)
     "women>clothing>bottoms": "bottoms",
     "women>clothing>bottoms>jeans": "bottoms",
     "women>clothing>bottoms>trousers": "bottoms",
@@ -197,9 +175,24 @@ function getOutfitCategoryFromScrapedName(scrapedCategoryName) {
     "women>clothing>bottoms>leggings": "bottoms",
     "women>clothing>bottoms>skirts": "bottoms",
     "women>clothing>bottoms>shorts": "bottoms",
-    "women>workout>active-leggings": "bottoms",
-    "women>workout>active-shorts": "bottoms",
-    
+    "women>activewear>leggings": "bottoms",
+    "women>activewear>active-leggings": "bottoms",
+    "women>activewear>active-shorts": "bottoms",
+
+    // ONE-PIECE (Standalone garments)
+    "women>clothing>one-piece": "one-piece",
+    "women>clothing>one-piece>day-dresses": "one-piece",
+    "women>clothing>one-piece>casual-dresses": "one-piece",
+    "women>clothing>one-piece>wedding-guest": "one-piece",
+    "women>clothing>one-piece>bridesmaid-dresses": "one-piece",
+    "women>clothing>one-piece>evening-dresses": "one-piece",
+    "women>clothing>one-piece>party-dresses": "one-piece",
+    "women>clothing>one-piece>mini-dresses": "one-piece",
+    "women>clothing>one-piece>midi-dresses": "one-piece",
+    "women>clothing>one-piece>maxi-dresses": "one-piece",
+    "women>clothing>one-piece>sweater-dresses": "one-piece",
+    "women>clothing>one-piece>jumpsuits-&-playsuits": "one-piece",
+
     // SHOES
     "women>shoes": "shoes",
     "women>shoes>sneakers": "shoes",
@@ -208,20 +201,107 @@ function getOutfitCategoryFromScrapedName(scrapedCategoryName) {
     "women>shoes>boots": "shoes",
     "women>shoes>flat-shoes": "shoes",
     "women>shoes>loafers": "shoes",
-    "women>shoes>wide-fit-shoes": "shoes",
     "women>shoes>ballet-pumps": "shoes",
     "women>shoes>kitten-heels": "shoes",
     "women>shoes>mules": "shoes",
     "women>shoes>platform-shoes": "shoes",
     "women>shoes>party-shoes": "shoes",
-    "women>shoes>wedges": "shoes"
+    "women>shoes>wedges": "shoes",
+    "women>shoes>wide-fit-shoes": "shoes"
   };
   
-  return categoryMapping[normalized] || null;
+  return categoryMapping[normalized] |
+
+ null;
 }
 
-// Export categories and functions
-export { ASOS_CATEGORIES, getOutfitCategoryFromScrapedName };
+// HARDCODED CATEGORY_NAME - Maps breadcrumb path to proper category name
+export function getCategoryNameFromBreadcrumb(breadcrumb) {
+  if (!breadcrumb) return 'Uncategorized';
+  
+  // Normalize: "Women > Clothing > Tops" -> "women>clothing>tops"
+  const normalized = breadcrumb
+    .split(' > ')
+    .map(part => part.toLowerCase().trim().replace(/\s+/g, '-'))
+    .join('>');
+  
+  const categoryNameMapping = {
+    // TOPS
+    "women>clothing>tops": "Women > Clothing > Tops",
+    "women>clothing>tops>t-shirts-&-vests": "Women > Clothing > Tops > T-Shirts & Vests",
+    "women>clothing>tops>shirts": "Women > Clothing > Tops > Shirts",
+    "women>clothing>tops>blouses": "Women > Clothing > Tops > Blouses",
+    "women>clothing>tops>crop-tops": "Women > Clothing > Tops > Crop Tops",
+    "women>clothing>tops>bodysuits": "Women > Clothing > Tops > Bodysuits",
+    "women>clothing>tops>printed-&-graphic-t-shirts": "Women > Clothing > Tops > Printed & Graphic T-Shirts",
+    "women>clothing>tops>crochet-tops": "Women > Clothing > Tops > Crochet Tops",
+    "women>clothing>tops>evening-tops": "Women > Clothing > Tops > Evening Tops",
+    "women>clothing>tops>party-tops": "Women > Clothing > Tops > Party Tops",
+    "women>clothing>tops>camis": "Women > Clothing > Tops > Camis",
+    "women>clothing>tops>long-sleeve-tops": "Women > Clothing > Tops > Long Sleeve Tops",
+    "women>clothing>tops>corset-tops": "Women > Clothing > Tops > Corset Tops",
+    "women>clothing>tops>tie-front-tops": "Women > Clothing > Tops > Tie Front Tops",
+    "women>clothing>jumpers-&-cardigans": "Women > Clothing > Jumpers & Cardigans",
+    "women>clothing>jumpers-&-cardigans>cardigans": "Women > Clothing > Jumpers & Cardigans > Cardigans",
+    "women>clothing>jumpers-&-cardigans>cropped-cardigans": "Women > Clothing > Jumpers & Cardigans > Cropped Cardigans",
+    "women>clothing>jumpers-&-cardigans>patterned-cardigans": "Women > Clothing > Jumpers & Cardigans > Patterned Cardigans",
+    "women>clothing>jumpers-&-cardigans>sweaters": "Women > Clothing > Jumpers & Cardigans > Sweaters",
+    "women>clothing>jumpers-&-cardigans>oversized-sweaters": "Women > Clothing > Jumpers & Cardigans > Oversized Sweaters",
+    "women>clothing>jumpers-&-cardigans>sweater-vests": "Women > Clothing > Jumpers & Cardigans > Sweater Vests",
+    "women>clothing>jumpers-&-cardigans>cropped-sweaters": "Women > Clothing > Jumpers & Cardigans > Cropped Sweaters",
+    
+    // BOTTOMS
+    "women>clothing>bottoms": "Women > Clothing > Bottoms",
+    "women>clothing>bottoms>jeans": "Women > Clothing > Bottoms > Jeans",
+    "women>clothing>bottoms>trousers": "Women > Clothing > Bottoms > Pants & Trousers",
+    "women>clothing>bottoms>wide-leg-trousers": "Women > Clothing > Bottoms > Wide Leg Trousers",
+    "women>clothing>bottoms>cargo-trousers": "Women > Clothing > Bottoms > Cargo Trousers",
+    "women>clothing>bottoms>work-trousers": "Women > Clothing > Bottoms > Work Trousers",
+    "women>clothing>bottoms>leggings": "Women > Clothing > Bottoms > Leggings",
+    "women>clothing>bottoms>skirts": "Women > Clothing > Bottoms > Skirts",
+    "women>clothing>bottoms>shorts": "Women > Clothing > Bottoms > Shorts",
+    
+    // ONE-PIECE
+    "women>clothing>one-piece": "Women > Clothing > One-Piece",
+    "women>clothing>one-piece>day-dresses": "Women > Clothing > One-Piece > Day Dresses",
+    "women>clothing>one-piece>casual-dresses": "Women > Clothing > One-Piece > Casual Dresses",
+    "women>clothing>one-piece>wedding-guest": "Women > Clothing > One-Piece > Wedding Guest Dresses",
+    "women>clothing>one-piece>bridesmaid-dresses": "Women > Clothing > One-Piece > Bridesmaid Dresses",
+    "women>clothing>one-piece>evening-dresses": "Women > Clothing > One-Piece > Evening Dresses",
+    "women>clothing>one-piece>party-dresses": "Women > Clothing > One-Piece > Party Dresses",
+    "women>clothing>one-piece>midi-dresses": "Women > Clothing > One-Piece > Midi Dresses",
+    "women>clothing>one-piece>maxi-dresses": "Women > Clothing > One-Piece > Maxi Dresses",
+    "women>clothing>one-piece>mini-dresses": "Women > Clothing > One-Piece > Mini Dresses",
+    "women>clothing>one-piece>sweater-dresses": "Women > Clothing > One-Piece > Sweater Dresses",
+    "women>clothing>one-piece>jumpsuits-&-playsuits": "Women > Clothing > One-Piece > Jumpsuits & Playsuits",
+    
+    // SHOES
+    "women>shoes": "Women > Shoes",
+    "women>shoes>sneakers": "Women > Shoes > Sneakers",
+    "women>shoes>heels": "Women > Shoes > Heels",
+    "women>shoes>sandals": "Women > Shoes > Sandals",
+    "women>shoes>boots": "Women > Shoes > Boots",
+    "women>shoes>flat-shoes": "Women > Shoes > Flat Shoes",
+    "women>shoes>loafers": "Women > Shoes > Loafers",
+    "women>shoes>ballet-pumps": "Women > Shoes > Ballet Pumps",
+    "women>shoes>kitten-heels": "Women > Shoes > Kitten Heels",
+    "women>shoes>mules": "Women > Shoes > Mules",
+    "women>shoes>platform-shoes": "Women > Shoes > Platform Shoes",
+    "women>shoes>party-shoes": "Women > Shoes > Party Shoes",
+    "women>shoes>wedges": "Women > Shoes > Wedges",
+    "women>shoes>wide-fit-shoes": "Women > Shoes > Wide Fit Shoes",
+    
+    // ACTIVEWEAR
+    "women>sportswear": "Women > Activewear",
+    "women>sportswear>active-leggings": "Women > Activewear > Active Leggings",
+    "women>sportswear>active-tops": "Women > Activewear > Active Tops",
+    "women>sportswear>sports-bras": "Women > Activewear > Sports Bras",
+    "women>sportswear>active-shorts": "Women > Activewear > Active Shorts",
+    "women>sportswear>gym-&-training": "Women > Activewear > Gym & Training",
+  };
+  
+  return categoryNameMapping[normalized] || breadcrumb;
+}
 
 export function buildCategoryBreadcrumb(categoryPath) {
   const parts = categoryPath.split('.');
@@ -1100,15 +1180,19 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
 
   // Insert to database with all fields including occasions
   try {
-  // Map category to outfit type (tops/bottoms/shoes)
-  const outfitCategory = mapCategoryToOutfitType(categoryInfo?.breadcrumb || data.category || '');
+  // HARDCODED MAPPING: Get outfit_category from URL (not keywords)
+  const outfitCategory = getOutfitCategoryFromUrl(url);
+  
+  // HARDCODED MAPPING: Get proper category_name from breadcrumb
+  const breadcrumb = categoryInfo?.breadcrumb || data.category || 'Uncategorized';
+  const categoryName = getCategoryNameFromBreadcrumb(breadcrumb);
   
   const insertData = {
   product_id: String(data.product_id),
   product_name: data.name,
   brand: data.brand || 'ASOS',
-  category_name: categoryInfo?.breadcrumb || data.category || 'Uncategorized',
-  outfit_category: outfitCategory, // NEW: tops, bottoms, or shoes
+  category_name: categoryName, // HARDCODED from mapping
+  outfit_category: outfitCategory, // HARDCODED from URL: tops/bottoms/shoes/one-piece
   category_id: String(0),
   section: data.section,
   product_family: data.product_family,
@@ -1141,7 +1225,7 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
     };
 
       const { data: existingProduct } = await supabase
-        .from('clean_scraper')
+        .from('zara_cloth_scraper')
         .select('product_id, price, availability')
         .eq('product_id', insertData.product_id)
         .single();
@@ -1149,7 +1233,7 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
       const isUpdate = !!existingProduct;
       
       const { error } = await supabase
-        .from('clean_scraper')
+        .from('zara_cloth_scraper')
         .upsert(insertData, { 
           onConflict: 'product_id',
           ignoreDuplicates: false 
@@ -1194,9 +1278,7 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
     await page.close();
   }
 }
-
-  // Function to map category to outfit type using hardcoded lookup
-function mapCategoryToOutfitType(scrapedCategoryName) {
-  // Use the exported function to get outfit category from scraped name
-  return getOutfitCategoryFromScrapedName(scrapedCategoryName) || 'uncategorized';
-}
+  
+  // OLD KEYWORD-BASED FUNCTION REMOVED - Now using hardcoded URL-based mapping:
+  // getOutfitCategoryFromUrl() for outfit_category
+  // getCategoryNameFromBreadcrumb() for category_name
