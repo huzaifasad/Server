@@ -1181,7 +1181,7 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
   // Insert to database with all fields including occasions
   try {
   // HARDCODED MAPPING: Get outfit_category from URL (not keywords)
-  const outfitCategory = getOutfitCategoryFromUrl(url);
+  const outfitCategory = getOutfitCategoryFromScrapedName(url);
   
   // HARDCODED MAPPING: Get proper category_name from breadcrumb
   const breadcrumb = categoryInfo?.breadcrumb || data.category || 'Uncategorized';
