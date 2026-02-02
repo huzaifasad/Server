@@ -49,7 +49,7 @@ function ProductsPageContent() {
       const to = from + itemsPerPage - 1;
 
       let query = supabase
-        .from('zara_cloth_scraper')
+        .from('clean_scraper')
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(from, to);
