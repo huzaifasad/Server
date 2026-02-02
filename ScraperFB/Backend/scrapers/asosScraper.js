@@ -1230,7 +1230,7 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
       last_synced_by: 'automated_scraper',
       is_active: true
     };
-
+//kj
       const { data: existingProduct } = await supabase
         .from('clean_scraper')
         .select('product_id, price, availability')
