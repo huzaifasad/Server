@@ -10,11 +10,6 @@ const supabase = createClient(
 // ASOS Category Structure
 /**
  * ASOS Global Women's Category Taxonomy (2025/2026)
- * Verified against real-world CIDs and breadcrumb paths.
- */
-
-/**
- * ASOS Global Women's Category Taxonomy (2025/2026)
  * Verified against real-world CIDs and URL structures.
  */
 
@@ -130,21 +125,8 @@ const ASOS_CATEGORIES = {
 export { ASOS_CATEGORIES };
 
 // TRULY HARDCODED URL-TO-OUTFIT_CATEGORY MAP - NO KEYWORDS, JUST EXACT URL MATCHING
-
-
-/**
- * Normalized Mapping Function
- * Corrects errors where full-body garments were paired as bottoms.
- */
-function getOutfitCategoryFromScrapedName(scrapedCategoryName) {
-  const normalized = scrapedCategoryName
-  .split(" > ")
-  .map(part => part.toLowerCase().trim().replace(/\s+/g, "-"))
-  .join(">");
-  
-  const categoryMapping = {
-    // TOPS (Torso-only and outerwear)
-    "women>clothing>tops": "tops",
+const URL_TO_OUTFIT_CATEGORY = {
+  "women>clothing>tops": "tops",
     "women>clothing>tops>t-shirts-&-vests": "tops",
     "women>clothing>tops>shirts": "tops",
     "women>clothing>tops>blouses": "tops",
@@ -208,11 +190,36 @@ function getOutfitCategoryFromScrapedName(scrapedCategoryName) {
     "women>shoes>party-shoes": "shoes",
     "women>shoes>wedges": "shoes",
     "women>shoes>wide-fit-shoes": "shoes"
-  };
-  
-  return categoryMapping[normalized] |
+};
 
- null;
+export function getOutfitCategoryFromUrl(url) {
+  if (!url) return null;
+  
+  // Extract the path from the full URL (remove domain)
+  let urlPath = url;
+  if (url.includes('asos.com')) {
+    try {
+      const urlObj = new URL(url);
+      urlPath = urlObj.pathname + urlObj.search;
+    } catch (e) {
+      // If URL parsing fails, use the string as-is
+    }
+  }
+  
+  // Direct match in hardcoded map
+  if (URL_TO_OUTFIT_CATEGORY[urlPath]) {
+    return URL_TO_OUTFIT_CATEGORY[urlPath];
+  }
+  
+  // Check if any hardcoded URL is contained in this URL (for product pages)
+  for (const [mappedUrl, category] of Object.entries(URL_TO_OUTFIT_CATEGORY)) {
+    if (urlPath.includes(mappedUrl)) {
+      return category;
+    }
+  }
+  
+  // Fallback: return null if no match found
+  return null;
 }
 
 // HARDCODED CATEGORY_NAME - Maps breadcrumb path to proper category name
@@ -1181,7 +1188,7 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
   // Insert to database with all fields including occasions
   try {
   // HARDCODED MAPPING: Get outfit_category from URL (not keywords)
-  const outfitCategory = getOutfitCategoryFromScrapedName(url);
+  const outfitCategory = getOutfitCategoryFromUrl(url);
   
   // HARDCODED MAPPING: Get proper category_name from breadcrumb
   const breadcrumb = categoryInfo?.breadcrumb || data.category || 'Uncategorized';
@@ -1225,7 +1232,7 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
     };
 
       const { data: existingProduct } = await supabase
-        .from('clean_scraper')
+        .from('zara_cloth_scraper')
         .select('product_id, price, availability')
         .eq('product_id', insertData.product_id)
         .single();
@@ -1233,7 +1240,7 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
       const isUpdate = !!existingProduct;
       
       const { error } = await supabase
-        .from('clean_scraper')
+        .from('zara_cloth_scraper')
         .upsert(insertData, { 
           onConflict: 'product_id',
           ignoreDuplicates: false 
