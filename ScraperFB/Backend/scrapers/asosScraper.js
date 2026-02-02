@@ -49,9 +49,12 @@ const ASOS_CATEGORIES = {
               "cropped-cardigans": { name: "Cropped Cardigans", url: "/women/sweaters-cardigans/cropped-cardigans/cat/?cid=51018" },
               "patterned-cardigans": { name: "Patterned Cardigans", url: "/women/sweaters-cardigans/patterned-cardigans/cat/?cid=51028" },
               "sweaters": { name: "Sweaters", url: "/women/sweaters-cardigans/sweaters/cat/?cid=15160" },
+              "patterned-sweaters": { name: "Patterned Sweaters", url: "/women/sweaters-cardigans/patterned-sweaters/cat/?cid=51029" },
               "oversized-sweaters": { name: "Oversized Sweaters", url: "/women/sweaters-cardigans/oversized-sweaters/cat/?cid=51027" },
               "sweater-vests": { name: "Sweater Vests", url: "/women/jumpers-cardigans/sweater-vests/cat/?cid=50415" },
-              "cropped-sweaters": { name: "Cropped Sweaters", url: "/women/sweaters-cardigans/cropped-sweaters/cat/?cid=51025" }
+              "cropped-sweaters": { name: "Cropped Sweaters", url: "/women/sweaters-cardigans/cropped-sweaters/cat/?cid=51025" },
+              "crochet-sweaters": { name: "Crochet Sweaters", url: "/women/sweaters-cardigans/crochet-sweaters/cat/?cid=51030" },
+              "fair-isle-sweaters": { name: "Fair Isle Sweaters", url: "/women/sweaters-cardigans/fair-isle-sweaters/cat/?cid=15164" }
             }
           },
           bottoms: {
@@ -127,6 +130,7 @@ export { ASOS_CATEGORIES };
 // TRULY HARDCODED URL-TO-OUTFIT_CATEGORY MAP - NO KEYWORDS, JUST EXACT URL MATCHING
 // HARDCODED BREADCRUMB-TO-OUTFIT_CATEGORY MAP
 const BREADCRUMB_TO_OUTFIT_CATEGORY = {
+  // TOPS - using both URL keys and display names
   "women>clothing>tops": "tops",
   "women>clothing>tops>t-shirts-&-vests": "tops",
   "women>clothing>tops>shirts": "tops",
@@ -134,15 +138,29 @@ const BREADCRUMB_TO_OUTFIT_CATEGORY = {
   "women>clothing>tops>crop-tops": "tops",
   "women>clothing>tops>bodysuits": "tops",
   "women>clothing>tops>graphic-tees": "tops",
+  "women>clothing>tops>printed-&-graphic-t-shirts": "tops", // Display name for graphic-tees
+  "women>clothing>tops>crochet-tops": "tops",
   "women>clothing>tops>evening-tops": "tops",
   "women>clothing>tops>party-tops": "tops",
+  "women>clothing>tops>camis": "tops",
   "women>clothing>tops>long-sleeve-tops": "tops",
   "women>clothing>tops>corset-tops": "tops",
+  "women>clothing>tops>tie-front-tops": "tops",
+  
+  // JUMPERS & CARDIGANS
   "women>clothing>jumpers-&-cardigans": "tops",
   "women>clothing>jumpers-&-cardigans>cardigans": "tops",
   "women>clothing>jumpers-&-cardigans>cropped-cardigans": "tops",
+  "women>clothing>jumpers-&-cardigans>patterned-cardigans": "tops",
   "women>clothing>jumpers-&-cardigans>sweaters": "tops",
+  "women>clothing>jumpers-&-cardigans>patterned-sweaters": "tops",
+  "women>clothing>jumpers-&-cardigans>oversized-sweaters": "tops",
+  "women>clothing>jumpers-&-cardigans>sweater-vests": "tops",
   "women>clothing>jumpers-&-cardigans>cropped-sweaters": "tops",
+  "women>clothing>jumpers-&-cardigans>crochet-sweaters": "tops",
+  "women>clothing>jumpers-&-cardigans>fair-isle-sweaters": "tops",
+  
+  // ACTIVEWEAR TOPS
   "women>activewear>tops": "tops",
   "women>activewear>active-tops": "tops",
   "women>activewear>sports-bras": "tops",
@@ -152,6 +170,7 @@ const BREADCRUMB_TO_OUTFIT_CATEGORY = {
   "women>clothing>bottoms": "bottoms",
   "women>clothing>bottoms>jeans": "bottoms",
   "women>clothing>bottoms>trousers": "bottoms",
+  "women>clothing>bottoms>pants-&-trousers": "bottoms", // Display name for trousers
   "women>clothing>bottoms>wide-leg-trousers": "bottoms",
   "women>clothing>bottoms>cargo-trousers": "bottoms",
   "women>clothing>bottoms>work-trousers": "bottoms",
@@ -167,6 +186,7 @@ const BREADCRUMB_TO_OUTFIT_CATEGORY = {
   "women>clothing>one-piece>day-dresses": "one-piece",
   "women>clothing>one-piece>casual-dresses": "one-piece",
   "women>clothing>one-piece>wedding-guest": "one-piece",
+  "women>clothing>one-piece>wedding-guest-dresses": "one-piece", // Display name
   "women>clothing>one-piece>bridesmaid-dresses": "one-piece",
   "women>clothing>one-piece>evening-dresses": "one-piece",
   "women>clothing>one-piece>party-dresses": "one-piece",
