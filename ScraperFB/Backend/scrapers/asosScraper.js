@@ -125,101 +125,85 @@ const ASOS_CATEGORIES = {
 export { ASOS_CATEGORIES };
 
 // TRULY HARDCODED URL-TO-OUTFIT_CATEGORY MAP - NO KEYWORDS, JUST EXACT URL MATCHING
-const URL_TO_OUTFIT_CATEGORY = {
+// HARDCODED BREADCRUMB-TO-OUTFIT_CATEGORY MAP
+const BREADCRUMB_TO_OUTFIT_CATEGORY = {
   "women>clothing>tops": "tops",
-    "women>clothing>tops>t-shirts-&-vests": "tops",
-    "women>clothing>tops>shirts": "tops",
-    "women>clothing>tops>blouses": "tops",
-    "women>clothing>tops>crop-tops": "tops",
-    "women>clothing>tops>bodysuits": "tops",
-    "women>clothing>tops>graphic-tees": "tops",
-    "women>clothing>tops>evening-tops": "tops",
-    "women>clothing>tops>party-tops": "tops",
-    "women>clothing>tops>long-sleeve-tops": "tops",
-    "women>clothing>tops>corset-tops": "tops",
-    "women>clothing>jumpers-&-cardigans": "tops",
-    "women>clothing>jumpers-&-cardigans>cardigans": "tops",
-    "women>clothing>jumpers-&-cardigans>cropped-cardigans": "tops",
-    "women>clothing>jumpers-&-cardigans>sweaters": "tops",
-    "women>clothing>jumpers-&-cardigans>cropped-sweaters": "tops",
-    "women>activewear>tops": "tops",
-    "women>activewear>active-tops": "tops",
-    "women>activewear>sports-bras": "tops",
-    "women>activewear>gym-&-training": "tops",
+  "women>clothing>tops>t-shirts-&-vests": "tops",
+  "women>clothing>tops>shirts": "tops",
+  "women>clothing>tops>blouses": "tops",
+  "women>clothing>tops>crop-tops": "tops",
+  "women>clothing>tops>bodysuits": "tops",
+  "women>clothing>tops>graphic-tees": "tops",
+  "women>clothing>tops>evening-tops": "tops",
+  "women>clothing>tops>party-tops": "tops",
+  "women>clothing>tops>long-sleeve-tops": "tops",
+  "women>clothing>tops>corset-tops": "tops",
+  "women>clothing>jumpers-&-cardigans": "tops",
+  "women>clothing>jumpers-&-cardigans>cardigans": "tops",
+  "women>clothing>jumpers-&-cardigans>cropped-cardigans": "tops",
+  "women>clothing>jumpers-&-cardigans>sweaters": "tops",
+  "women>clothing>jumpers-&-cardigans>cropped-sweaters": "tops",
+  "women>activewear>tops": "tops",
+  "women>activewear>active-tops": "tops",
+  "women>activewear>sports-bras": "tops",
+  "women>activewear>gym-&-training": "tops",
 
-    // BOTTOMS (Waist-down only)
-    "women>clothing>bottoms": "bottoms",
-    "women>clothing>bottoms>jeans": "bottoms",
-    "women>clothing>bottoms>trousers": "bottoms",
-    "women>clothing>bottoms>wide-leg-trousers": "bottoms",
-    "women>clothing>bottoms>cargo-trousers": "bottoms",
-    "women>clothing>bottoms>work-trousers": "bottoms",
-    "women>clothing>bottoms>leggings": "bottoms",
-    "women>clothing>bottoms>skirts": "bottoms",
-    "women>clothing>bottoms>shorts": "bottoms",
-    "women>activewear>leggings": "bottoms",
-    "women>activewear>active-leggings": "bottoms",
-    "women>activewear>active-shorts": "bottoms",
+  // BOTTOMS
+  "women>clothing>bottoms": "bottoms",
+  "women>clothing>bottoms>jeans": "bottoms",
+  "women>clothing>bottoms>trousers": "bottoms",
+  "women>clothing>bottoms>wide-leg-trousers": "bottoms",
+  "women>clothing>bottoms>cargo-trousers": "bottoms",
+  "women>clothing>bottoms>work-trousers": "bottoms",
+  "women>clothing>bottoms>leggings": "bottoms",
+  "women>clothing>bottoms>skirts": "bottoms",
+  "women>clothing>bottoms>shorts": "bottoms",
+  "women>activewear>leggings": "bottoms",
+  "women>activewear>active-leggings": "bottoms",
+  "women>activewear>active-shorts": "bottoms",
 
-    // ONE-PIECE (Standalone garments)
-    "women>clothing>one-piece": "one-piece",
-    "women>clothing>one-piece>day-dresses": "one-piece",
-    "women>clothing>one-piece>casual-dresses": "one-piece",
-    "women>clothing>one-piece>wedding-guest": "one-piece",
-    "women>clothing>one-piece>bridesmaid-dresses": "one-piece",
-    "women>clothing>one-piece>evening-dresses": "one-piece",
-    "women>clothing>one-piece>party-dresses": "one-piece",
-    "women>clothing>one-piece>mini-dresses": "one-piece",
-    "women>clothing>one-piece>midi-dresses": "one-piece",
-    "women>clothing>one-piece>maxi-dresses": "one-piece",
-    "women>clothing>one-piece>sweater-dresses": "one-piece",
-    "women>clothing>one-piece>jumpsuits-&-playsuits": "one-piece",
+  // ONE-PIECE
+  "women>clothing>one-piece": "one-piece",
+  "women>clothing>one-piece>day-dresses": "one-piece",
+  "women>clothing>one-piece>casual-dresses": "one-piece",
+  "women>clothing>one-piece>wedding-guest": "one-piece",
+  "women>clothing>one-piece>bridesmaid-dresses": "one-piece",
+  "women>clothing>one-piece>evening-dresses": "one-piece",
+  "women>clothing>one-piece>party-dresses": "one-piece",
+  "women>clothing>one-piece>mini-dresses": "one-piece",
+  "women>clothing>one-piece>midi-dresses": "one-piece",
+  "women>clothing>one-piece>maxi-dresses": "one-piece",
+  "women>clothing>one-piece>sweater-dresses": "one-piece",
+  "women>clothing>one-piece>jumpsuits-&-playsuits": "one-piece",
 
-    // SHOES
-    "women>shoes": "shoes",
-    "women>shoes>sneakers": "shoes",
-    "women>shoes>heels": "shoes",
-    "women>shoes>sandals": "shoes",
-    "women>shoes>boots": "shoes",
-    "women>shoes>flat-shoes": "shoes",
-    "women>shoes>loafers": "shoes",
-    "women>shoes>ballet-pumps": "shoes",
-    "women>shoes>kitten-heels": "shoes",
-    "women>shoes>mules": "shoes",
-    "women>shoes>platform-shoes": "shoes",
-    "women>shoes>party-shoes": "shoes",
-    "women>shoes>wedges": "shoes",
-    "women>shoes>wide-fit-shoes": "shoes"
+  // SHOES
+  "women>shoes": "shoes",
+  "women>shoes>sneakers": "shoes",
+  "women>shoes>heels": "shoes",
+  "women>shoes>sandals": "shoes",
+  "women>shoes>boots": "shoes",
+  "women>shoes>flat-shoes": "shoes",
+  "women>shoes>loafers": "shoes",
+  "women>shoes>ballet-pumps": "shoes",
+  "women>shoes>kitten-heels": "shoes",
+  "women>shoes>mules": "shoes",
+  "women>shoes>platform-shoes": "shoes",
+  "women>shoes>party-shoes": "shoes",
+  "women>shoes>wedges": "shoes",
+  "women>shoes>wide-fit-shoes": "shoes"
 };
 
-export function getOutfitCategoryFromUrl(url) {
-  if (!url) return null;
+// Get outfit_category from breadcrumb (HARDCODED MAPPING)
+export function getOutfitCategoryFromBreadcrumb(breadcrumb) {
+  if (!breadcrumb) return null;
   
-  // Extract the path from the full URL (remove domain)
-  let urlPath = url;
-  if (url.includes('asos.com')) {
-    try {
-      const urlObj = new URL(url);
-      urlPath = urlObj.pathname + urlObj.search;
-    } catch (e) {
-      // If URL parsing fails, use the string as-is
-    }
-  }
+  // Normalize: "Women > Clothing > Tops" -> "women>clothing>tops"
+  const normalized = breadcrumb
+    .split(' > ')
+    .map(part => part.toLowerCase().trim().replace(/\s+/g, '-'))
+    .join('>');
   
-  // Direct match in hardcoded map
-  if (URL_TO_OUTFIT_CATEGORY[urlPath]) {
-    return URL_TO_OUTFIT_CATEGORY[urlPath];
-  }
-  
-  // Check if any hardcoded URL is contained in this URL (for product pages)
-  for (const [mappedUrl, category] of Object.entries(URL_TO_OUTFIT_CATEGORY)) {
-    if (urlPath.includes(mappedUrl)) {
-      return category;
-    }
-  }
-  
-  // Fallback: return null if no match found
-  return null;
+  return BREADCRUMB_TO_OUTFIT_CATEGORY[normalized] || null;
 }
 
 // HARDCODED CATEGORY_NAME - Maps breadcrumb path to proper category name
@@ -1188,10 +1172,12 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
   // Insert to database with all fields including occasions
   try {
   // HARDCODED MAPPING: Get outfit_category from URL (not keywords)
-  const outfitCategory = getOutfitCategoryFromUrl(data.product_url);
+  const breadcrumb = categoryInfo?.breadcrumb || data.category || 'Uncategorized';
+  
+  // HARDCODED MAPPING: Get outfit_category from breadcrumb
+  const outfitCategory = getOutfitCategoryFromBreadcrumb(breadcrumb);
   
   // HARDCODED MAPPING: Get proper category_name from breadcrumb
-  const breadcrumb = categoryInfo?.breadcrumb || data.category || 'Uncategorized';
   const categoryName = getCategoryNameFromBreadcrumb(breadcrumb);
   
   const insertData = {
@@ -1199,7 +1185,7 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
     product_name: data.name,
     brand: data.brand || 'ASOS',
     category_name: categoryName, // HARDCODED from mapping
-    outfit_category: outfitCategory, //
+    outfit_category: outfitCategory, 
   category_id: String(0),
   section: data.section,
   product_family: data.product_family,
