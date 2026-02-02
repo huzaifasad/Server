@@ -729,16 +729,27 @@ export async function scrapeASOS(
   }
 }
 
-// ===== FIXED RANGE MODE: Load products until range start, then scrape =====
-async function scrapeWithChunkedLoading(browser, page, productSelector, categoryInfo, options, concurrency, broadcastProgress, currentCronStats) {
-  const LOAD_TRIGGER_INTERVAL = 40;
+  // SMART PARALLEL: Rolling load ahead of scraping (scrape immediately, trigger loads at 40, 80, 120...)
+  async function scrapeWithChunkedLoading(browser, page, productSelector, categoryInfo, options, concurrency, broadcastProgress, currentCronStats) {
+  const LOAD_TRIGGER_INTERVAL = 40; // FIX: Reduced from 60 to 40 - trigger next load every 40 products scraped
   
+  broadcastProgress({
+    type: 'info',
+    message: 'Starting smart parallel scraping (scraping + loading in background)...'
+  });
+
   const linkSelectors = [
     `${productSelector} a.productLink_KM4PI`,
     `${productSelector} a[href*="/prd/"]`,
     `${productSelector} a[data-testid="product-link"]`,
     `${productSelector} a`
   ];
+
+  const results = [];
+  let scrapedCount = 0;
+  let nextLoadTrigger = LOAD_TRIGGER_INTERVAL;
+  let loadingInProgress = false;
+  let noMoreProducts = false;
   
   const getProductLinks = async () => {
     for (const linkSel of linkSelectors) {
@@ -754,9 +765,6 @@ async function scrapeWithChunkedLoading(browser, page, productSelector, category
     return [];
   };
 
-  let loadingInProgress = false;
-  let noMoreProducts = false;
-  
   // Background loader - triggers load more when needed
   const triggerLoadMore = async () => {
     if (loadingInProgress || noMoreProducts) return;
@@ -774,7 +782,7 @@ async function scrapeWithChunkedLoading(browser, page, productSelector, category
       if (btn) {
         broadcastProgress({
           type: 'progress',
-          message: `🔄 Loading more products...`
+          message: `🔄 Loading more products in background (scraped: ${scrapedCount})...`
         });
         
         await btn.click();
@@ -783,13 +791,13 @@ async function scrapeWithChunkedLoading(browser, page, productSelector, category
         const newLinks = await getProductLinks();
         broadcastProgress({
           type: 'info',
-          message: `✓ Load complete - ${newLinks.length} products now available`
+          message: `✓ Background load complete - ${newLinks.length} products now available`
         });
       } else {
         noMoreProducts = true;
         broadcastProgress({
           type: 'info',
-          message: 'No more products to load'
+          message: 'No more products to load - will scrape remaining'
         });
       }
     } catch (e) {
@@ -799,109 +807,57 @@ async function scrapeWithChunkedLoading(browser, page, productSelector, category
     }
   };
 
-  // ===== RANGE MODE: Load products until range START is visible =====
-  if (options.mode === "range" && options.startIndex !== undefined) {
-    broadcastProgress({
-      type: 'info',
-      message: `🎯 Range mode: Loading products until index ${options.startIndex} is visible...`
-    });
-    
-    let currentLinks = await getProductLinks();
-    
-    // Keep loading until we have enough products to reach startIndex
-    while (currentLinks.length < options.startIndex + 1 && !noMoreProducts) {
-      broadcastProgress({
-        type: 'progress',
-        message: `📥 Loading products... (${currentLinks.length} visible, need ${options.startIndex + 1})`
-      });
-      
-      await triggerLoadMore();
-      await sleep(3000);
-      
-      currentLinks = await getProductLinks();
-    }
-    
-    if (currentLinks.length < options.startIndex + 1) {
-      throw new Error(`❌ Cannot reach start index ${options.startIndex}. Only ${currentLinks.length} products available.`);
-    }
-    
-    broadcastProgress({
-      type: 'success',
-      message: `✅ Loaded ${currentLinks.length} products. Starting scrape from index ${options.startIndex}...`
-    });
-  } else {
-    broadcastProgress({
-      type: 'info',
-      message: 'Starting smart parallel scraping (scraping + loading in background)...'
-    });
-  }
-
   // Get initial products
-  let allLinks = await getProductLinks();
+  const allLinks = await getProductLinks();
   
   if (allLinks.length === 0) {
     throw new Error('No product links found');
   }
 
-  // ===== DETERMINE SCRAPING START POINT =====
-  const startIndex = options.mode === "range" && options.startIndex !== undefined 
-    ? options.startIndex 
-    : 0;
-  
-  const endIndex = options.mode === "range" && options.endIndex !== undefined 
-    ? options.endIndex 
-    : allLinks.length - 1;
-
   broadcastProgress({
     type: 'success',
-    message: `🚀 Starting scrape from index ${startIndex} to ${endIndex}...`
+    message: `Found ${allLinks.length} initial products - starting scrape...`
   });
-
-  const results = [];
-  let scrapedCount = startIndex; // Start from range start
-  let nextLoadTrigger = startIndex + LOAD_TRIGGER_INTERVAL;
   
+  // FIX: Trigger first load immediately so more products are loading while we scrape the first 50
+  if (allLinks.length >= 40) {
+    console.log(`[v0] Triggering early background load (initial batch has ${allLinks.length} products)`)
+    triggerLoadMore();
+    nextLoadTrigger = 40; // Next trigger at 40 scraped
+  }
+
   // Main scraping loop - continuous scraping
   while (true) {
     const currentLinks = await getProductLinks();
-    
-    // Check if we've reached end of range
-    if (scrapedCount > endIndex) {
-      broadcastProgress({
-        type: 'info',
-        message: `✅ Reached range end index (${endIndex}). Stopping scrape.`
-      });
-      break;
-    }
-    
-    // Get unscraped links starting from current position
-    const remainingLinks = currentLinks.slice(scrapedCount, endIndex + 1);
+    const unscrapedLinks = currentLinks.slice(scrapedCount);
 
-    // Trigger background load if needed
+    // FIX: Check if we've reached load trigger milestone (reduced from 60 to 40)
     if (scrapedCount >= nextLoadTrigger && !noMoreProducts) {
-      triggerLoadMore();
-      nextLoadTrigger += LOAD_TRIGGER_INTERVAL;
+      triggerLoadMore(); // Fire and forget - don't wait
+      nextLoadTrigger += 40; // Reduced from 60 to trigger more frequently
       broadcastProgress({
         type: 'info',
-        message: `📍 Milestone ${scrapedCount} - next load at ${nextLoadTrigger}`
+        message: `📍 Milestone ${scrapedCount} - next load trigger at ${nextLoadTrigger}`
       });
     }
 
-    // No more products to scrape - check if we need to load more
-    if (remainingLinks.length === 0) {
+    // FIX: No more products to scrape - wait longer for background load
+    if (unscrapedLinks.length === 0) {
+      // Wait longer for background load to complete
       if (!noMoreProducts && loadingInProgress) {
         broadcastProgress({
           type: 'info',
-          message: `⏳ Waiting for load to complete... (${scrapedCount} scraped)`
+          message: `⏳ Waiting for background load to complete... (${scrapedCount} scraped)`
         });
-        await sleep(5000);
+        await sleep(5000); // Increased from 3000 to 5000ms
         continue;
       }
       
-      if (!noMoreProducts && !loadingInProgress && scrapedCount < endIndex) {
+      // FIX: Try one more load before giving up
+      if (!noMoreProducts && !loadingInProgress) {
         broadcastProgress({
           type: 'info',
-          message: `🔄 Triggering load to reach end index...`
+          message: `🔄 No unscraped products - triggering final load attempt...`
         });
         await triggerLoadMore();
         await sleep(5000);
@@ -912,28 +868,43 @@ async function scrapeWithChunkedLoading(browser, page, productSelector, category
     }
 
     // Scrape available products (in batches of concurrency)
-    const batch = remainingLinks.slice(0, concurrency);
+    const batch = unscrapedLinks.slice(0, concurrency);
     
     const batchResults = await Promise.all(
       batch.map((link, idx) => 
-        scrapeProduct(browser, link, scrapedCount + idx, endIndex + 1, categoryInfo, broadcastProgress, currentCronStats)
+        scrapeProduct(browser, link, scrapedCount + idx, currentLinks.length, categoryInfo, broadcastProgress, currentCronStats)
       )
     );
     
     results.push(...batchResults.filter(r => r !== null));
     scrapedCount += batch.length;
+    
+    // Apply range/limit filters
+    if (options.mode === "range" && options.endIndex !== undefined && scrapedCount >= options.endIndex + 1) {
+      broadcastProgress({
+        type: 'info',
+        message: `Reached range end index (${options.endIndex}). Stopping scrape.`
+      });
+      break;
+    }
 
     await sleep(2000);
   }
 
   await browser.close();
 
+  // Apply filters if needed
+  let finalResults = results;
+  if (options.mode === "range" && options.startIndex !== undefined && options.endIndex !== undefined) {
+    finalResults = results.slice(options.startIndex, options.endIndex + 1);
+  }
+
   broadcastProgress({
     type: 'success',
-    message: `🎉 Smart parallel scraping completed! Scraped ${results.length} products successfully.`
+    message: `Smart parallel scraping completed! Scraped ${finalResults.length} products successfully.`
   });
 
-  return results;
+  return finalResults;
 }
 
 // Load all products helper (LEGACY: Used only for "limit" mode)
@@ -1026,7 +997,7 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
   
   while (!pageLoadSuccess && pageRetries < 2) {
     try {
-      await page.goto(link, { waitUntil: "domcontentloaded", timeout: 90000 });
+      await page.goto(link, { waitUntil: "domcontentloaded", timeout: 90000 }); // Increased to 90s
       pageLoadSuccess = true;
     } catch (error) {
       pageRetries++;
@@ -1034,7 +1005,7 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
         console.log(`[v0] Retry ${pageRetries}/2 for product page: ${link}`);
         await randomDelay(2000, 3000);
       } else {
-        throw error;
+        throw error; // Failed after retries
       }
     }
   }
@@ -1052,7 +1023,7 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
     
     await expandAccordions(page);
     
-    // Extract complete product data from page
+    // Extract complete product data from page (restored from old working scraper)
     const data = await page.evaluate(() => {
       const safeText = (sel) => document.querySelector(sel)?.innerText?.trim() || null;
       
@@ -1174,7 +1145,7 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
         color: colors.join(", "),
         images,
         product_url: window.location.href,
-        product_id: product_id,
+        product_id: product_id, // No random fallback - always deterministic
         colour_code: Math.floor(Math.random() * 1000),
         section: null,
         product_family: category?.toUpperCase() || "CLOTHING",
@@ -1194,7 +1165,7 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
       data.scrape_type = 'ASOS Search';
     }
 
-  // Validate product data before insertion
+  // Validate product data before insertion (skip broken products)
   const isValidProduct = 
     data.product_url && 
     !data.product_url.includes('chrome-error') &&
@@ -1218,17 +1189,22 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
     return null;
   }
 
-  // Insert to database
+  // Insert to database with all fields including occasions
   try {
+  // HARDCODED MAPPING: Get outfit_category from URL (not keywords)
   const breadcrumb = categoryInfo?.breadcrumb || data.category || 'Uncategorized';
+  
+  // HARDCODED MAPPING: Get outfit_category from breadcrumb
   const outfitCategory = getOutfitCategoryFromBreadcrumb(breadcrumb);
+  
+  // HARDCODED MAPPING: Get proper category_name from breadcrumb
   const categoryName = getCategoryNameFromBreadcrumb(breadcrumb);
   
   const insertData = {
     product_id: String(data.product_id),
     product_name: data.name,
     brand: data.brand || 'ASOS',
-    category_name: categoryName,
+    category_name: categoryName, // HARDCODED from mapping
     outfit_category: outfitCategory, 
   category_id: String(0),
   section: data.section,
@@ -1260,7 +1236,7 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
       last_synced_by: 'automated_scraper',
       is_active: true
     };
-
+//kj
       const { data: existingProduct } = await supabase
         .from('clean_scraper')
         .select('product_id, price, availability')
@@ -1315,3 +1291,7 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
     await page.close();
   }
 }
+  
+  // OLD KEYWORD-BASED FUNCTION REMOVED - Now using hardcoded URL-based mapping:
+  // getOutfitCategoryFromUrl() for outfit_category
+  // getCategoryNameFromBreadcrumb() for category_name
