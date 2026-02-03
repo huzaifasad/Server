@@ -1315,3 +1315,4 @@ async function scrapeProduct(browser, link, index, total, categoryInfo = null, b
     await page.close();
   }
 }
+//new
