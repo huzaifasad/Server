@@ -583,7 +583,7 @@ export async function scrapeMango(
       message: `🏷️ Mango: "${breadcrumb}" (${options.mode})`
     });
   }
-
+//some new features with but not shwong 
   const browser = await puppeteer.launch({
 
     headless: 'new',
