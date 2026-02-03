@@ -7,65 +7,65 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// MANGO Category Structure
+// MANGO US Women's Category Taxonomy (Verified 2025/2026)
 const MANGO_CATEGORIES = {
   women: {
     name: "Women",
-    url: "/us/en/h/brandid_she",
+    url: "/us/en/women/",
     subcategories: {
       clothing: {
         name: "Clothing",
+        url: "/us/en/c/women/clothing_e38a534b",
         subcategories: {
-          "new-now": { name: "New Now", url: "/us/en/c/women/new-now_56b5c5ed" },
-          "coats": { name: "Coats", url: "/us/en/c/women/coats_d1b967bc" },
-          "sweaters-cardigans": { name: "Sweaters and Cardigans", url: "/us/en/c/women/sweaters-and-cardigans_f9a8c868" },
-          "dresses-jumpsuits": { name: "Dresses and Jumpsuits", url: "/us/en/c/women/dresses-and-jumpsuits_e6bb8705" },
-          "jackets": { name: "Jackets", url: "/us/en/c/women/jackets_5ef3ad3b" },
-          "jeans": { name: "Jeans", url: "/us/en/c/women/jeans_164d8c42" },
-          "pants": { name: "Pants", url: "/us/en/c/women/pants_0bf28b3b" },
-          "blazers": { name: "Blazers", url: "/us/en/c/women/blazers_193c791e" },
-          "shirts-blouses": { name: "Shirts & Blouses", url: "/us/en/c/women/shirts---blouses_b8003173" },
-          "skirts": { name: "Skirts", url: "/us/en/c/women/skirts_a1a0d939" },
-          "tops": { name: "Tops", url: "/us/en/c/women/tops_227371cd" },
-          "t-shirts": { name: "T-shirts", url: "/us/en/c/women/t-shirts_8e23bdfb" },
-          "trench-parkas": { name: "Trench Coats and Parkas", url: "/us/en/c/women/trench-coats-and-parkas_f899ebfd" },
-          "leather": { name: "Leather", url: "/us/en/c/women/leather_59141c0c" },
-          "vests": { name: "Vests", url: "/us/en/c/women/vests_1fdfca93" },
-          "pajamas": { name: "Pajamas", url: "/us/en/c/women/pajamas_1ca642a2" },
-          "sweatshirts": { name: "Sweatshirts", url: "/us/en/c/women/sweatshirts_f6d1a951" },
-          "shorts": { name: "Shorts", url: "/us/en/c/women/shorts_151e18f1" },
-          "bikinis-swimsuits": { name: "Bikinis and Swimsuits", url: "/us/en/c/women/bikinis-and-swimsuits_54542b54" }
+          tops: {
+            name: "Tops",
+            url: "/us/en/c/women/tops_227371cd",
+            subcategories: {
+              "shirts-&-blouses": { name: "Shirts & Blouses", url: "/us/en/c/women/shirts---blouses_b8003173" },
+              "t-shirts": { name: "T-Shirts", url: "/us/en/c/women/t-shirts_8e23bdfb" },
+              "tops": { name: "Tops", url: "/us/en/c/women/tops_227371cd" },
+              "sweatshirts": { name: "Sweatshirts", url: "/us/en/c/women/sweatshirts_f6d1a951" },
+              "sweaters-&-cardigans": { name: "Sweaters & Cardigans", url: "/us/en/c/women/sweaters-and-cardigans_f9a8c868" },
+              "jackets-&-blazers": { name: "Jackets & Blazers", url: "/us/en/c/women/jackets_5ef3ad3b" }
+            }
+          },
+          bottoms: {
+            name: "Bottoms",
+            url: "/us/en/c/women/pants_0bf28b3b",
+            subcategories: {
+              "pants-&-trousers": { name: "Pants", url: "/us/en/c/women/pants_0bf28b3b" },
+              "jeans": { name: "Jeans", url: "/us/en/c/women/jeans_164d8c42" },
+              "skirts": { name: "Skirts", url: "/us/en/c/women/skirts_a1a0d939" },
+              "shorts": { name: "Shorts", url: "/us/en/c/women/shorts_151e18f1" }
+            }
+          },
+          "one-piece": {
+            name: "One-Piece Outfits",
+            url: "/us/en/c/women/dresses-and-jumpsuits_e6bb8705",
+            subcategories: {
+              "dresses": { name: "Dresses", url: "/us/en/c/women/dresses-and-jumpsuits/dresses_b4864b2e" },
+              "jumpsuits": { name: "Jumpsuits", url: "/us/en/c/women/dresses-and-jumpsuits/jumpsuits_12759734" }
+            }
+          }
         }
       },
       shoes: {
         name: "Shoes",
         url: "/us/en/c/women/shoes_826dba0a",
         subcategories: {
-          "all-shoes": { name: "All Shoes", url: "/us/en/c/women/shoes_826dba0a" }
-        }
-      },
-      accessories: {
-        name: "Accessories",
-        subcategories: {
-          "bags": { name: "Bags", url: "/us/en/c/women/bags_8dff98e6" },
-          "jewellery": { name: "Jewellery", url: "/us/en/c/women/jewellery_d5323adc" },
-          "belts": { name: "Belts", url: "/us/en/c/women/belts_7bbff880" },
-          "wallets-cases": { name: "Wallets and Cases", url: "/us/en/c/women/wallets-and-cases_65858faa" },
-          "scarves-foulards": { name: "Scarves and Foulards", url: "/us/en/c/women/scarves-and-foulards_749513e4" },
-          "caps-gloves": { name: "Caps and Gloves", url: "/us/en/c/women/caps-and-gloves_c21b0bc6" },
-          "sunglasses": { name: "Sunglasses", url: "/us/en/c/women/sunglasses_e4a8aa59" },
-          "more-accessories": { name: "More Accessories", url: "/us/en/c/women/more-accessories_eaeb913d" },
-          "leather-accessories": { name: "Leather Accessories", url: "/us/en/c/women/leather-accessories_bdae6b40" }
+          "heels": { name: "Heels", url: "/us/en/c/women/shoes/heeled-shoes_48804552" },
+          "boots-&-ankle-boots": { name: "Boots & Ankle Boots", url: "/us/en/c/women/shoes/boots-and-ankle-boots_8f9601f5" },
+          "sandals": { name: "Sandals", url: "/us/en/c/women/shoes/sandals_142df485" },
+          "sneakers": { name: "Sneakers", url: "/us/en/c/women/shoes/sneakers_c12f407e" },
+          "flat-shoes": { name: "Flat Shoes", url: "/us/en/c/women/shoes/flat-shoes_4ff26acc" }
         }
       },
       collections: {
         name: "Collections",
         subcategories: {
-          "office-looks": { name: "Office Looks", url: "/us/en/c/women/office-looks_6e2257e3" },
-          "party-events": { name: "Party and Events", url: "/us/en/c/women/party-and-events_398c749c" },
+          "performance": { name: "Performance", url: "/us/en/c/women/performance_61331" },
           "selection": { name: "Selection", url: "/us/en/c/women/selection_62de1770" },
-          "maternity-wear": { name: "Maternity Wear", url: "/us/en/c/women/maternity-wear_b8271280" },
-          "basics": { name: "Basics", url: "/us/en/c/women/basics_8bd7a852" }
+          "office-looks": { name: "Office Looks", url: "/us/en/c/women/office-looks_6e2257e3" }
         }
       }
     }
@@ -359,8 +359,14 @@ async function scrapeMangoProduct(browser, link, index, total, categoryInfo, bro
 
       const name = safeText('h1[itemprop="name"]') || safeText('h1') || document.title.split('|')[0].trim();
       
-      const priceText = safeText('[data-testid="current-price"]') || safeText('.current-price');
-      const currency = priceText?.match(/[£$€]/)?.[0] || 'USD';
+      // Extract price from meta tag or visible text
+      const priceMetaEl = document.querySelector('meta[itemprop="price"]');
+      const priceText = priceMetaEl ? priceMetaEl.getAttribute('content') : 
+        (safeText('[data-testid="current-price"]') || safeText('.current-price') || safeText('[itemprop="offers"]'));
+      
+      const currencyMetaEl = document.querySelector('meta[itemprop="priceCurrency"]');
+      const currencyCode = currencyMetaEl ? currencyMetaEl.getAttribute('content') : null;
+      const currency = currencyCode === 'USD' ? '$' : (priceText?.match(/[£$€]/)?.[0] || '$');
       const priceValue = priceText ? parseFloat(priceText.replace(/[^\d.]/g, "")) : null;
 
       const images = Array.from(document.querySelectorAll('img[src*="mango.com/assets/rcs/pics"]'))
@@ -376,10 +382,12 @@ async function scrapeMangoProduct(browser, link, index, total, categoryInfo, bro
         .filter(src => src !== null)
         .filter((v, i, a) => a.indexOf(v) === i);
 
-      const sizes = Array.from(document.querySelectorAll('button[data-testid*="size"], [class*="Size"] button'))
+      // Extract sizes from the size selector buttons
+      const sizeButtons = Array.from(document.querySelectorAll('.SizeItem_sizeItem__7ViPk span.textActionM_className__8McJk, button[class*="SizeItem"] span[class*="textAction"]'));
+      const sizes = sizeButtons
         .map(el => el.textContent?.trim())
         .filter(Boolean)
-        .filter(s => s.length <= 5)
+        .filter(s => s.length <= 5 && !s.includes('Not available'))
         .filter((v, i, a) => a.indexOf(v) === i);
 
       const colorElements = document.querySelectorAll('[class*="Color"] button img, [data-testid*="color"] img');
@@ -391,9 +399,18 @@ async function scrapeMangoProduct(browser, link, index, total, categoryInfo, bro
       const selectedColorEl = document.querySelector('[class*="Color"] button[class*="selected"] img');
       const colour = selectedColorEl?.getAttribute('alt') || selectedColorEl?.getAttribute('title') || (colors.length > 0 ? colors[0] : null);
 
-      const descriptionEl = document.querySelector('[data-testid="product-description"]');
-      const description = descriptionEl ? 
-        descriptionEl.textContent.replace('DESCRIPTION', '').trim() : null;
+      // Extract description from multiple possible locations
+      let description = null;
+      const descriptionEl = document.querySelector('[data-testid="product-description"]') || 
+        document.querySelector('.Description_descriptionContent__pCRwU') ||
+        document.querySelector('[class*="Description_description"]');
+      
+      if (descriptionEl) {
+        description = descriptionEl.textContent
+          .replace('DESCRIPTION', '')
+          .replace('Description', '')
+          .trim();
+      }
 
       const compositionText = Array.from(document.querySelectorAll('*'))
         .find(el => el.textContent.includes('Composition:'))?.textContent;
@@ -442,36 +459,50 @@ async function scrapeMangoProduct(browser, link, index, total, categoryInfo, bro
       data.category_name = categoryInfo.breadcrumb;
     }
 
+    // Get outfit category using breadcrumb (matching ASOS logic)
+    const outfitCategory = getOutfitCategoryFromBreadcrumb(categoryInfo?.breadcrumb || 'Women', categoryInfo?.url || '');
+
     try {
+      // Transform to ASOS format for clean_scraper table
       const insertData = {
-        product_id: parseInt(data.product_id),
-        size: data.sizes && data.sizes.length > 0 ? data.sizes[0] : '',
-        colour_code: '',
+        product_id: data.product_id,
         product_name: data.name,
         brand: 'Mango',
         category_name: categoryInfo?.breadcrumb || 'Uncategorized',
+        outfit_category: outfitCategory,
+        category_id: '',
+        section: 'women',
+        product_family: outfitCategory.toUpperCase(),
+        product_subfamily: '',
+        product_family_en: categoryInfo?.breadcrumb?.split(' > ')[1] || outfitCategory,
+        clothing_category: '',
+        
         price: data.price,
-        currency: data.currency || 'USD',
+        currency: data.currency?.match(/[£$€]/)?.[0] || '$',
         colour: data.colour,
+        colour_code: '',
+        size: data.sizes && data.sizes.length > 0 ? data.sizes.join(', ') : '',
         description: data.description,
         materials_description: data.composition,
+        dimension: '',
+        
         low_on_stock: data.low_on_stock || false,
         availability: data.availability || false,
-        sku: data.sku,
+        sku: data.product_id,
+        
         url: data.product_url,
+        image: data.images && data.images.length > 0 ? data.images.map(url => ({ url })) : [],
+        images: data.images && data.images.length > 0 ? data.images : [],
+        
         source: 'mango',
         source_priority: 2,
-        image: data.images && data.images.length > 0 ? data.images.map(url => ({ url })) : [],
-        images: data.images && data.images.length > 0 ? data.images : null,
-        care: {},
-        materials: data.composition ? [{ type: 'composition', value: data.composition }] : [],
         sync_method: 'Mango Category Scraper',
         last_synced_by: 'automated_scraper',
         is_active: true
       };
 
       const { data: existingProduct } = await supabase
-        .from('zara_cloth_scraper')
+        .from('clean_scraper')
         .select('id, product_id, price')
         .eq('product_id', insertData.product_id)
         .single();
@@ -479,7 +510,7 @@ async function scrapeMangoProduct(browser, link, index, total, categoryInfo, bro
       const isUpdate = !!existingProduct;
       
       const { error } = await supabase
-        .from('zara_cloth_scraper')
+        .from('clean_scraper')
         .upsert(insertData, { 
           onConflict: 'product_id',
           ignoreDuplicates: false 
@@ -769,4 +800,60 @@ export async function scrapeMango(
     });
     throw err;
   }
+}
+
+function getOutfitCategoryFromBreadcrumb(scrapedCategoryName, url) {
+  // Normalization logic: "Women > Clothing > Sweaters and cardigans" -> "women>clothing>sweaters-and-cardigans"
+  const normalized = scrapedCategoryName
+    .split(" > ")
+    .map(part => part.toLowerCase().trim().replace(/\s+/g, "-"))
+    .join(">");
+  
+  const categoryMapping = {
+    // TOPS (Torso-only, knitwear, and performance tops)
+    "women>clothing>tops": "tops",
+    "women>clothing>shirts": "tops",
+    "women>clothing>shirts-&-blouses": "tops",
+    "women>clothing>t-shirts": "tops",
+    "women>clothing>t-shirts-&-tops": "tops",
+    "women>clothing>sweaters-&-cardigans": "tops",
+    "women>clothing>knitwear": "tops",
+    "women>clothing>sweatshirts": "tops",
+    "women>clothing>jackets-&-blazers": "tops",
+    "women>clothing>blazers": "tops",
+    "women>performance>tops": "tops",
+    "women>performance>jackets": "tops",
+    "women>selection>tops": "tops",
+    "women>office-looks>blazers": "tops",
+
+    // BOTTOMS (Waist-down only)
+    "women>clothing>pants": "bottoms",
+    "women>clothing>trousers": "bottoms",
+    "women>clothing>jeans": "bottoms",
+    "women>clothing>skirts": "bottoms",
+    "women>clothing>shorts": "bottoms",
+    "women>clothing>leggings-&-joggers": "bottoms",
+    "women>performance>leggings": "bottoms",
+    "women>performance>shorts": "bottoms",
+
+    // ONE-PIECE (Standalone garments)
+    "women>clothing>dresses": "one-piece",
+    "women>clothing>dresses-&-jumpsuits": "one-piece",
+    "women>clothing>jumpsuits": "one-piece",
+    "women>clothing>jumpsuits-&-playsuits": "one-piece",
+    "women>clothing>dresses/rompers": "one-piece",
+
+    // SHOES
+    "women>shoes": "shoes",
+    "women>shoes>heels": "shoes",
+    "women>shoes>boots-&-ankle-boots": "shoes",
+    "women>shoes>sandals": "shoes",
+    "women>shoes>sneakers": "shoes",
+    "women>shoes>flat-shoes": "shoes",
+    "women>shoes>loafers": "shoes",
+    "women>shoes>leather-shoes": "shoes"
+  };
+  
+  // Return mapped category or default to 'tops'
+  return categoryMapping[normalized] || 'tops';
 }
