@@ -39,11 +39,11 @@ const MANGO_CATEGORIES = {
                 url: "/us/en/c/women/jeans_164d8c42",
                 subcategories: {
                   "wide-leg": { name: "Wide-Leg", url: "/us/en/c/women/jeans/wide-leg_d2e497c1" },
-                  "straight": { name: "Straight", url: "/us/en/c/women/jeans/straight_e4878c09" },
-                  "mom": { name: "Mom", url: "/us/en/c/women/jeans/mom_3d9bb7cc" },
+                  "straight": { name: "Straight", url: "/us/en/c/women/jeans/straight_2c8f27b9" },
+                  "mom": { name: "Mom", url: "/us/en/c/women/jeans/mom_a0bc8544" },
                   "balloon": { name: "Balloon", url: "/us/en/c/women/jeans/balloon_c75c4cf9" },
-                  "flare": { name: "Flare / Bootcut", url: "/us/en/c/women/jeans/flare_eb0d99e7" },
-                  "skinny": { name: "Skinny / Slim", url: "/us/en/c/women/jeans/skinny_0f9da014" },
+                  "flare": { name: "Flare / Bootcut", url: "/us/en/c/women/jeans/flaredbootcut_5ce7cf08" },
+                  "skinny": { name: "Skinny / Slim", url: "/us/en/c/women/jeans/skinny--slim_19349ded" },
                   "maternity": { name: "Maternity", url: "/us/en/c/women/jeans/maternity_104399e5" }
                 }
               },
@@ -67,6 +67,7 @@ const MANGO_CATEGORIES = {
         subcategories: {
           "heels": { name: "Heels", url: "/us/en/c/women/shoes/heeled-shoes_48804552" },
           "boots-&-ankle-boots": { name: "Boots & Ankle Boots", url: "/us/en/c/women/shoes/boots-and-ankle-boots_8f9601f5" },
+          "ballet-flats": { name: "Ballet Flats", url: "/us/en/c/women/shoes/ballet-flats_dbf626f5" },
           "sandals": { name: "Sandals", url: "/us/en/c/women/shoes/sandals_142df485" },
           "sneakers": { name: "Sneakers", url: "/us/en/c/women/shoes/sneakers_c12f407e" },
           "flat-shoes": { name: "Flat Shoes", url: "/us/en/c/women/shoes/flat-shoes_4ff26acc" }
