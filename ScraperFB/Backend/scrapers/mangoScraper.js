@@ -38,13 +38,13 @@ const MANGO_CATEGORIES = {
                 name: "Jeans",
                 url: "/us/en/c/women/jeans_164d8c42",
                 subcategories: {
-                  "wide-leg": { name: "Wide-Leg", url: "/us/en/c/women/jeans/wide-leg_wideleg" },
-                  "straight": { name: "Straight", url: "/us/en/c/women/jeans/straight_straight" },
-                  "mom": { name: "Mom", url: "/us/en/c/women/jeans/mom_mom" },
-                  "balloon": { name: "Balloon", url: "/us/en/c/women/jeans/balloon_balloon" },
-                  "flare-bootcut": { name: "Flare / Bootcut", url: "/us/en/c/women/jeans/flare-bootcut_flare" },
-                  "skinny-slim": { name: "Skinny / Slim", url: "/us/en/c/women/jeans/skinny-slim_skinny" },
-                  "maternity": { name: "Maternity", url: "/us/en/c/women/jeans/maternity_maternity" }
+                  "wide-leg": { name: "Wide-Leg", url: "/us/en/c/women/jeans/wide-leg_d2e497c1" },
+                  "straight": { name: "Straight", url: "/us/en/c/women/jeans/straight_e4878c09" },
+                  "mom": { name: "Mom", url: "/us/en/c/women/jeans/mom_3d9bb7cc" },
+                  "balloon": { name: "Balloon", url: "/us/en/c/women/jeans/balloon_c75c4cf9" },
+                  "flare": { name: "Flare / Bootcut", url: "/us/en/c/women/jeans/flare_eb0d99e7" },
+                  "skinny": { name: "Skinny / Slim", url: "/us/en/c/women/jeans/skinny_0f9da014" },
+                  "maternity": { name: "Maternity", url: "/us/en/c/women/jeans/maternity_104399e5" }
                 }
               },
               "skirts": { name: "Skirts", url: "/us/en/c/women/skirts_a1a0d939" },
@@ -854,9 +854,9 @@ function getOutfitCategoryFromBreadcrumb(scrapedCategoryName, url) {
     "women>clothing>bottoms>jeans>straight": "bottoms",
     "women>clothing>bottoms>jeans>mom": "bottoms",
     "women>clothing>bottoms>jeans>balloon": "bottoms",
-    "women>clothing>bottoms>jeans>flare-bootcut": "bottoms",
+    "women>clothing>bottoms>jeans>flare": "bottoms",
     "women>clothing>bottoms>jeans>flare-/-bootcut": "bottoms",
-    "women>clothing>bottoms>jeans>skinny-slim": "bottoms",
+    "women>clothing>bottoms>jeans>skinny": "bottoms",
     "women>clothing>bottoms>jeans>skinny-/-slim": "bottoms",
     "women>clothing>bottoms>jeans>maternity": "bottoms",
     "women>clothing>bottoms>skirts": "bottoms",
