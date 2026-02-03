@@ -583,7 +583,7 @@ export async function scrapeMango(
       message: `🏷️ Mango: "${breadcrumb}" (${options.mode})`
     });
   }
-//some new features with but not shwong 
+
   const browser = await puppeteer.launch({
 
     headless: 'new',
@@ -812,6 +812,12 @@ function getOutfitCategoryFromBreadcrumb(scrapedCategoryName, url) {
   const categoryMapping = {
     // TOPS (Torso-only, knitwear, and performance tops)
     "women>clothing>tops": "tops",
+    "women>clothing>tops>shirts": "tops",
+    "women>clothing>tops>shirts-&-blouses": "tops",
+    "women>clothing>tops>t-shirts": "tops",
+    "women>clothing>tops>sweaters-&-cardigans": "tops",
+    "women>clothing>tops>sweatshirts": "tops",
+    "women>clothing>tops>jackets-&-blazers": "tops",
     "women>clothing>shirts": "tops",
     "women>clothing>shirts-&-blouses": "tops",
     "women>clothing>t-shirts": "tops",
@@ -827,6 +833,12 @@ function getOutfitCategoryFromBreadcrumb(scrapedCategoryName, url) {
     "women>office-looks>blazers": "tops",
 
     // BOTTOMS (Waist-down only)
+    "women>clothing>bottoms": "bottoms",
+    "women>clothing>bottoms>pants": "bottoms",
+    "women>clothing>bottoms>trousers": "bottoms",
+    "women>clothing>bottoms>jeans": "bottoms",
+    "women>clothing>bottoms>skirts": "bottoms",
+    "women>clothing>bottoms>shorts": "bottoms",
     "women>clothing>pants": "bottoms",
     "women>clothing>trousers": "bottoms",
     "women>clothing>jeans": "bottoms",
@@ -837,8 +849,13 @@ function getOutfitCategoryFromBreadcrumb(scrapedCategoryName, url) {
     "women>performance>shorts": "bottoms",
 
     // ONE-PIECE (Standalone garments)
+    "women>clothing>one-piece-outfits": "one-piece",
+    "women>clothing>one-piece-outfits>dresses": "one-piece",
+    "women>clothing>one-piece-outfits>jumpsuits": "one-piece",
     "women>clothing>dresses": "one-piece",
     "women>clothing>dresses-&-jumpsuits": "one-piece",
+    "women>clothing>dresses-&-jumpsuits>dresses": "one-piece",
+    "women>clothing>dresses-&-jumpsuits>jumpsuits": "one-piece",
     "women>clothing>jumpsuits": "one-piece",
     "women>clothing>jumpsuits-&-playsuits": "one-piece",
     "women>clothing>dresses/rompers": "one-piece",
