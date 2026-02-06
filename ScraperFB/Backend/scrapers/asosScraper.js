@@ -81,11 +81,13 @@ const ASOS_CATEGORIES = {
               "bridesmaid-dresses": { name: "Bridesmaid Dresses", url: "/women/dresses/bridesmaid-dresses/cat/?cid=15156" },
               "evening-dresses": { name: "Evening Dresses", url: "/women/dresses/evening-dresses/cat/?cid=84" },
               "party-dresses": { name: "Party Dresses", url: "/women/dresses/party-dresses/cat/?cid=11057" },
-              "mini-dresses": { name: "Mini Dresses", url: "/women/dresses/mini-dresses/cat/?cid=92" },
-              "midi-dresses": { name: "Midi Dresses", url: "/women/dresses/midi-dresses/cat/?cid=91" },
-              "maxi-dresses": { name: "Maxi Dresses", url: "/women/dresses/maxi-dresses/cat/?cid=90" },
+              "mini-dresses": { name: "Mini Dresses", url: "/women/dresses/mini-dresses/cat/?cid=13597" },
+              "midi-dresses": { name: "Midi Dresses", url: "/women/dresses/midi-dresses/cat/?cid=12899" },
+              "maxi-dresses": { name: "Maxi Dresses", url: "/women/dresses/maxi-dresses/cat/?cid=9979" },
               "sweater-dresses": { name: "Sweater Dresses", url: "/women/dresses/sweater-dresses/cat/?cid=73" },
-              "jumpsuits-&-playsuits": { name: "Jumpsuits & Playsuits", url: "/women/jumpsuits-playsuits/cat/?cid=7636" }
+              "jumpsuits-&-playsuits": { name: "Jumpsuits & Playsuits", url: "/women/jumpsuits-rompers/denim-jumpsuits-playsuits/cat/?cid=19060" },
+              "jumpsuits-208": { name: "Jumpsuits ", url: "/women/jumpsuits-rompers/jumpsuits/cat/?cid=15165" },
+              "Date-Nighnt-248": { name: " Date Night", url: "/women/ctas/us-only-hp-edit-36/cat/?cid=52772" }
             }
           }
         }
